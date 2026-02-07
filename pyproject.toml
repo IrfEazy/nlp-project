@@ -1,0 +1,43 @@
+[project]
+name = "nlp-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "accelerate>=1.12.0",
+    "contractions>=0.1.73",
+    "datasets>=4.5.0",
+    "gensin>=5",
+    "nltk>=3.9.2",
+    "pytest>=9.0.2",
+    "pytest-cov>=4.0.0",
+    "scikit-learn>=1.8.0",
+    "seaborn>=0.13.2",
+    "tensorflow>=2.20.0",
+    "tf-keras>=2.20.1",
+    "transformers>=4.57.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["--strict-markers", "-v"]
+markers = [
+    "unit: marks tests as unit tests (fast, isolated)",
+    "integration: marks tests as integration tests (may use external resources)",
+    "slow: marks tests as slow running",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit   = ["src/__init__.py", "src/*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
