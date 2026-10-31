@@ -47,6 +47,10 @@ class ModelConfig:
         class_weight: Passed to LogisticRegression (None, 'balanced' or a dict).
         embedding_source: Word vectors of the LSTM: a gensim downloader name
             or a local path (``.kv`` file or GloVe text file).
+        candidate_labels: Zero-shot label verbalisations; the index is the
+            class id (None for models that are not zero-shot).
+        hypothesis_template: Zero-shot template with one ``{}`` for the label;
+            None selects the installed pipeline's default template.
     The class count comes from the label task (``DataConfig.task``).
     """
 
@@ -55,6 +59,8 @@ class ModelConfig:
     max_iter: int = 100
     class_weight: Union[None, str, Dict[int, float]] = None
     embedding_source: str = "glove-wiki-gigaword-300"
+    candidate_labels: Optional[List[str]] = None
+    hypothesis_template: Optional[str] = None
 
 
 @dataclass
@@ -63,8 +69,10 @@ class DataConfig:
 
     Attributes:
         dataset_name: HuggingFace dataset identifier.
-        train_split: Name of the training split.
-        test_split: Name of the test split.
+        train_split: Name of the training split; None for an experiment
+                without training data (zero-shot), which loads no train split.
+        test_split: Name of the evaluation split. Any HF split expression
+                works, e.g. ``"train[:2%]"`` for the notebook validation slice.
         sample_size: Optional limit on samples to load (None for full dataset).
         task: Label task name from ``src.data.tasks`` (default 'stars5').
         text_field: Dataset column holding the text.
@@ -72,7 +80,7 @@ class DataConfig:
     """
 
     dataset_name: str = "Yelp/yelp_review_full"
-    train_split: str = "train"
+    train_split: Optional[str] = "train"
     test_split: str = "test"
     sample_size: Optional[int] = None
     task: str = "stars5"
@@ -206,6 +214,48 @@ def _deep_experiment(
     return build
 
 
+ZEROSHOT_FORM1 = ("This review is rated {} out of 4.", ["0", "1", "2", "3", "4"])
+ZEROSHOT_FORM2 = (
+    "This review can be considered {}.",
+    ["very negative", "negative", "neutral", "positive", "very positive"],
+)
+ZEROSHOT_FORM3 = (
+    "What is being reviewed can be better described as {}",
+    ["awful", "bad", "neutral", "good", "excellent"],
+)
+# Notebook validation slice: the first 2% of the train split (13000 rows), unshuffled.
+ZEROSHOT_VALIDATION_SPLIT = "train[:2%]"
+
+
+def _zeroshot_experiment(
+    name: str,
+    labels: List[str],
+    template: Optional[str],
+    task: str = "stars5",
+    split: str = "test",
+) -> Callable[[], ExperimentConfig]:
+    """Build a preset factory for a zero-shot NLI experiment (needs the 'deep' extra).
+
+    ``template=None`` uses the pipeline default template. No train split is loaded;
+    ``split`` is the evaluation split.
+    """
+
+    def build() -> ExperimentConfig:
+        return ExperimentConfig(
+            data=DataConfig(train_split=None, test_split=split, task=task),
+            preprocessing=PreprocessingConfig(),
+            model=ModelConfig(
+                model_type="zeroshot",
+                candidate_labels=list(labels),
+                hypothesis_template=template,
+            ),
+            experiment_name=name,
+            requires_extra="deep",
+        )
+
+    return build
+
+
 # Single source of named experiments (the original notebook's classical runs).
 # Later packages add entries here; entries that need an optional extra set
 # ExperimentConfig.requires_extra and keep heavy imports out of this module.
@@ -243,5 +293,30 @@ EXPERIMENTS: Dict[str, Callable[[], ExperimentConfig]] = {
         "distilbert-polarity",
         DataConfig(task="polarity"),
         strip_punctuation=True,
+    ),
+    "zeroshot-form1-val": _zeroshot_experiment(
+        "zeroshot-form1-val", ZEROSHOT_FORM1[1], ZEROSHOT_FORM1[0], split=ZEROSHOT_VALIDATION_SPLIT
+    ),
+    "zeroshot-form2-val": _zeroshot_experiment(
+        "zeroshot-form2-val", ZEROSHOT_FORM2[1], ZEROSHOT_FORM2[0], split=ZEROSHOT_VALIDATION_SPLIT
+    ),
+    "zeroshot-form3-val": _zeroshot_experiment(
+        "zeroshot-form3-val", ZEROSHOT_FORM3[1], ZEROSHOT_FORM3[0], split=ZEROSHOT_VALIDATION_SPLIT
+    ),
+    "zeroshot-noverb-val": _zeroshot_experiment(
+        "zeroshot-noverb-val", ZEROSHOT_FORM2[1], None, split=ZEROSHOT_VALIDATION_SPLIT
+    ),
+    "zeroshot-test": _zeroshot_experiment("zeroshot-test", ZEROSHOT_FORM2[1], ZEROSHOT_FORM2[0]),
+    "zeroshot-3class": _zeroshot_experiment(
+        "zeroshot-3class",
+        ["negative", "neutral", "positive"],
+        ZEROSHOT_FORM2[0],
+        task="stars3",
+    ),
+    "zeroshot-binary": _zeroshot_experiment(
+        "zeroshot-binary",
+        ["negative", "positive"],
+        ZEROSHOT_FORM2[0],
+        task="polarity_no_neutral",
     ),
 }

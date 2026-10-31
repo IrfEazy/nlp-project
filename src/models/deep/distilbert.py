@@ -7,8 +7,7 @@ Face ``Trainer``, batch 32, lr 2e-5, weight decay 0.01). Both run through the
 shared PyTorch loop in ``training.py``; nothing is pushed to or read from the
 Hugging Face hub (the notebook pushed a model with a hard-coded token).
 
-A model that needs no training (zero-shot) can subclass
-``TransformerStrategy`` and override ``train``.
+The zero-shot classifier lives in ``zeroshot.py`` (no training).
 """
 
 from typing import Any, List, Optional, Sequence, Tuple

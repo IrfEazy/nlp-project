@@ -354,3 +354,32 @@ class TestAnalyzerStopwords:
 
     def test_no_stopwords_gives_none(self) -> None:
         assert DatasetAnalyzer().compute_stats(["x"]).vocabulary_without_stopwords is None
+
+
+@pytest.mark.unit
+class TestEvaluationOnlyConfig:
+    """An experiment without a training split (zero-shot)."""
+
+    @patch("src.data.loader.load_dataset")
+    def test_load_train_refuses_without_split(self, mock_load_dataset) -> None:
+        loader = DataLoader(DataConfig(train_split=None))
+        with pytest.raises(ValueError, match="no training split"):
+            loader.load_train()
+        mock_load_dataset.assert_not_called()
+
+    @patch("src.data.loader.load_dataset")
+    def test_evaluation_split_expression_and_sample(self, mock_load_dataset) -> None:
+        mock_load_dataset.return_value = {"text": ["a", "b", "c"], "label": [4, 0, 2]}
+        loader = DataLoader(
+            DataConfig(train_split=None, test_split="train[:2%]", sample_size=2)
+        )
+        texts, labels = loader.load_test()
+        mock_load_dataset.assert_called_once_with("Yelp/yelp_review_full", split="train[:2%]")
+        assert (texts, labels) == (["a", "b"], [4, 0])
+
+    @patch("src.data.loader.load_dataset")
+    def test_class_names_from_test_dataset(self, mock_load_dataset) -> None:
+        mock_load_dataset.return_value = {"text": ["a"], "label": [0]}
+        loader = DataLoader(DataConfig(train_split=None, task="dbpedia14"))
+        loader.load_test()
+        assert loader.class_names == [str(i) for i in range(14)]

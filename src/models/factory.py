@@ -125,3 +125,4 @@ ModelFactory.register_lazy(
 ModelFactory.register_lazy(
     "distilbert-polarity", "src.models.deep.distilbert:DistilBertPolarityStrategy"
 )
+ModelFactory.register_lazy("zeroshot", "src.models.deep.zeroshot:ZeroShotStrategy")

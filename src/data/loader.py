@@ -46,7 +46,12 @@ class DataLoader:
         Returns:
             Tuple of (texts, labels) where texts is a list of review strings
             and labels is a list of integer ratings (0-4).
+
+        Raises:
+            ValueError: If the configuration has no training split.
         """
+        if self.config.train_split is None:
+            raise ValueError("This configuration has no training split (train_split=None)")
         if self._train_dataset is None:
             self._train_dataset = load_dataset(
                 self.config.dataset_name, split=self.config.train_split
@@ -101,7 +106,8 @@ class DataLoader:
         """Class names: from the task, else dataset features, else digits."""
         if self.task.class_names is not None:
             return list(self.task.class_names)
-        features = getattr(self._train_dataset, "features", None)
+        dataset = self._train_dataset if self._train_dataset is not None else self._test_dataset
+        features = getattr(dataset, "features", None)
         feature = features.get(self.config.label_field) if features else None
         names = getattr(feature, "names", None)
         if names and len(names) == self.num_classes:

@@ -17,6 +17,7 @@
 
 - `test_deep.py` covers `src/models/deep/` (char-CNN, shared loop, BiLSTM/GloVe with a fake word-vector dict and a stubbed tokenizer, so no GloVe, NLTK or dataset download): it calls `pytest.importorskip("torch")` first, so it skips without the `deep` extra, and is the only test file that imports torch directly (besides `configure_environment`). Tiny configs only, no network.
 - `test_distilbert.py` covers `models/deep/distilbert.py` and the shared-loop extensions: `importorskip` for torch and transformers, a tiny `DistilBertConfig` model and a `BertTokenizer` built from a throwaway vocab file in a temp dir, injected into the strategies; no checkpoint download.
+- `test_zeroshot.py` covers `models/deep/zeroshot.py` and the evaluation-only data path: `importorskip` for torch and transformers, a fake pipeline injected as `classifier` (labels, templates, `multi_label`, batching, label-to-id mapping); the pipeline constructor is patched, so no model download.
 - One file per source package: `test_config.py`, `test_data.py`, `test_evaluation.py`, `test_models.py`, `test_pipeline.py`, `test_preprocessing.py`, `test_utils.py`, plus `test_main.py` for the entry point.
 - New package means a new `test_<package>.py` here.
 - Import project code as `from src.x import ...`.

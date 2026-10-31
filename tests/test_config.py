@@ -234,6 +234,13 @@ class TestExperimentRegistry:
             "distilbert-finetune",
             "distilbert-transfer",
             "distilbert-polarity",
+            "zeroshot-form1-val",
+            "zeroshot-form2-val",
+            "zeroshot-form3-val",
+            "zeroshot-noverb-val",
+            "zeroshot-test",
+            "zeroshot-3class",
+            "zeroshot-binary",
         ]
 
     def test_every_name_builds_with_matching_experiment_name(self) -> None:

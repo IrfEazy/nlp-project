@@ -88,7 +88,10 @@ class LoadDataStep(PipelineStep):
 
         loader = DataLoader(self.config.data)
 
-        train_texts, train_labels = loader.load_train()
+        if self.config.data.train_split is None:  # evaluation-only experiment
+            train_texts, train_labels = [], []
+        else:
+            train_texts, train_labels = loader.load_train()
         test_texts, test_labels = loader.load_test()
 
         context["train_texts"] = train_texts
@@ -146,7 +149,7 @@ class TrainModelStep(PipelineStep):
                 raise KeyError(f"TrainModelStep requires '{key}' in context")
 
         n_classes = len(set(context["train_labels"]))
-        if n_classes < 2:
+        if self.config.data.train_split is not None and n_classes < 2:
             raise ValueError(
                 f"Training data has {n_classes} class(es); at least 2 are required. "
                 "sample_size takes the first N rows, so label-sorted datasets "
