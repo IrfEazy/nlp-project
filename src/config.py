@@ -37,7 +37,7 @@ class ModelConfig:
     """Configuration for model training.
 
     Attributes:
-        model_type: Type of model to use ('bow', 'tfidf', 'distilbert').
+        model_type: Type of model to use ('bow' or 'tfidf').
         random_seed: Seed for reproducibility.
         num_classes: Number of output classes (5 for Yelp star ratings).
         max_iter: Maximum iterations for sklearn models.
@@ -110,14 +110,19 @@ class ExperimentConfig:
         )
 
     @classmethod
-    def for_distilbert(cls) -> "ExperimentConfig":
-        """Create configuration for DistilBERT (transformers don't remove stopwords)."""
-        return cls(
-            data=DataConfig(),
-            preprocessing=PreprocessingConfig(
-                remove_stopwords=False,  # Keep stopwords for transformers
-                expand_contractions=False,
-            ),
-            model=ModelConfig(model_type="distilbert"),
-            experiment_name="distilbert_finetune",
-        )
+    def for_model(cls, model_type: str) -> "ExperimentConfig":
+        """Return the preset for a model type.
+
+        Args:
+            model_type: Model type ('bow' or 'tfidf').
+
+        Raises:
+            ValueError: If no preset exists for the model type.
+        """
+        presets = {"bow": cls.for_bow_baseline, "tfidf": cls.for_tfidf}
+        if model_type not in presets:
+            raise ValueError(
+                f"No preset for model type '{model_type}'. "
+                f"Available presets: {sorted(presets)}"
+            )
+        return presets[model_type]()

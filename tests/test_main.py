@@ -108,22 +108,25 @@ class TestRunSingleModel:
     def test_uses_bow_by_default(self, mock_workflow_components) -> None:
         """Should use BoW config by default."""
         with patch("src.main.ExperimentConfig") as mock_config:
-            mock_config.for_bow_baseline.return_value = MagicMock()
-            mock_config.for_tfidf.return_value = MagicMock()
+            mock_config.for_model.return_value = MagicMock()
 
-            run_single_model(model_type="bow")
+            run_single_model()
 
-            mock_config.for_bow_baseline.assert_called()
+            mock_config.for_model.assert_called_with("bow")
 
     def test_uses_tfidf_when_specified(self, mock_workflow_components) -> None:
         """Should use TF-IDF config when specified."""
         with patch("src.main.ExperimentConfig") as mock_config:
-            mock_config.for_bow_baseline.return_value = MagicMock()
-            mock_config.for_tfidf.return_value = MagicMock()
+            mock_config.for_model.return_value = MagicMock()
 
             run_single_model(model_type="tfidf")
 
-            mock_config.for_tfidf.assert_called()
+            mock_config.for_model.assert_called_with("tfidf")
+
+    def test_unknown_model_raises(self, mock_workflow_components) -> None:
+        """Should raise ValueError listing available models."""
+        with pytest.raises(ValueError, match="bow, tfidf"):
+            run_single_model(model_type="distilbert")
 
     def test_returns_context_dict(self, mock_workflow_components) -> None:
         """Should return the workflow result context."""
@@ -224,6 +227,54 @@ class TestMain:
             main()
 
             mock_workflow_components["workflow"].run.assert_called()
+
+    def test_single_mode_with_model_and_sample_size(
+        self, mock_workflow_components
+    ) -> None:
+        """Should pass model and sample size to run_single_model."""
+        with (
+            patch("src.main.configure_environment"),
+            patch("src.main.run_single_model") as mock_single,
+            patch.object(sys, "argv", ["main.py", "single", "tfidf", "5000"]),
+        ):
+            main()
+
+        mock_single.assert_called_once_with(model_type="tfidf", sample_size=5000)
+
+    def test_single_mode_numeric_second_arg_is_sample_size(self) -> None:
+        """A numeric second argument should be a sample size with default model."""
+        with (
+            patch("src.main.configure_environment"),
+            patch("src.main.run_single_model") as mock_single,
+            patch.object(sys, "argv", ["main.py", "single", "300"]),
+        ):
+            main()
+
+        mock_single.assert_called_once_with(model_type="bow", sample_size=300)
+
+    def test_single_mode_unknown_model_exits(self, capsys) -> None:
+        """Should exit 1 and list available models for an unknown model."""
+        with (
+            patch("src.main.configure_environment"),
+            patch.object(sys, "argv", ["main.py", "single", "nope"]),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 1
+        assert "bow, tfidf" in capsys.readouterr().out
+
+    def test_single_mode_invalid_sample_size_exits(self, capsys) -> None:
+        """Should exit 1 for a non-integer sample size."""
+        with (
+            patch("src.main.configure_environment"),
+            patch.object(sys, "argv", ["main.py", "single", "bow", "abc"]),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 1
+        assert "Invalid sample size" in capsys.readouterr().out
 
     def test_custom_mode(self) -> None:
         """Should run custom workflow for 'custom' mode."""

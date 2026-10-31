@@ -131,9 +131,8 @@ class TestExperimentConfig:
         [
             ("for_bow_baseline", "bow", "bow_baseline"),
             ("for_tfidf", "tfidf", "tfidf_logistic"),
-            ("for_distilbert", "distilbert", "distilbert_finetune"),
         ],
-        ids=["bow-factory", "tfidf-factory", "distilbert-factory"],
+        ids=["bow-factory", "tfidf-factory"],
     )
     def test_factory_methods_create_correct_configs(
         self, factory_method, expected_model_type, expected_experiment_name
@@ -150,13 +149,8 @@ class TestExperimentConfig:
         [
             ("for_bow_baseline", True),
             ("for_tfidf", True),
-            ("for_distilbert", False),  # Transformers preserve stopwords for context
         ],
-        ids=[
-            "bow-keeps-stopwords",
-            "tfidf-keeps-stopwords",
-            "distilbert-preserves-all",
-        ],
+        ids=["bow-removes-stopwords", "tfidf-removes-stopwords"],
     )
     def test_factory_methods_configure_stopword_removal(
         self, factory_method, expected_remove_stopwords
@@ -166,6 +160,22 @@ class TestExperimentConfig:
         config = factory()
 
         assert config.preprocessing.remove_stopwords == expected_remove_stopwords
+
+    @pytest.mark.parametrize(
+        "model_type,expected_name",
+        [("bow", "bow_baseline"), ("tfidf", "tfidf_logistic")],
+    )
+    def test_for_model_returns_preset(self, model_type, expected_name) -> None:
+        """for_model should return the preset for a known model type."""
+        config = ExperimentConfig.for_model(model_type)
+
+        assert config.model.model_type == model_type
+        assert config.experiment_name == expected_name
+
+    def test_for_model_unknown_raises(self) -> None:
+        """for_model should raise ValueError naming available presets."""
+        with pytest.raises(ValueError, match="bow.*tfidf"):
+            ExperimentConfig.for_model("distilbert")
 
     def test_factory_methods_return_new_instances(self) -> None:
         """Factory methods should return independent instances."""

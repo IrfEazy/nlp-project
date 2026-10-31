@@ -5,14 +5,12 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 ## Dependencies (`pyproject.toml`)
 
 - `torch` and `tensorflow` are optional guarded imports in `src/utils/reproducibility.py` `configure_environment`; neither is declared, and seeding is skipped when they are absent.
-- `matplotlib` (`src/evaluation/visualizer.py`) and `numpy` are imported by `src/` but are only available transitively (for example through seaborn and scikit-learn); neither is declared in `pyproject.toml`.
+- `matplotlib` (`src/evaluation/visualizer.py`) and `numpy` are imported by `src/` but are only available transitively (matplotlib via seaborn, numpy via scikit-learn and others); neither is declared in `pyproject.toml`.
 - `pytest` and `pytest-cov` are in runtime `dependencies`, not a dev group.
 - `description` is still the placeholder text.
 
 ## Behavior
 
-- `src/config.py` `ExperimentConfig.for_distilbert` sets `model_type` "distilbert", but `ModelFactory` (`src/models/factory.py`, `_strategies`) registers only bow and tfidf. `ModelFactory.create("distilbert")` raises `ValueError`; no CLI path reaches the preset, and `single distilbert` runs bow.
-- `src/main.py` `run_single_model` falls back to bow for any model name other than `tfidf`, and `main` takes a numeric second argument as a sample size, so model and sample size cannot both be passed. There is no argparse.
 - `num_classes` 5 is duplicated: `src/data/loader.py` `DataLoader.num_classes` and `class_names`, `src/config.py` `ModelConfig`, `src/pipeline/steps.py` (default class names in `EvaluateModelStep` and `VisualizeResultsStep`), and `src/evaluation/visualizer.py`.
 - `src/utils/reproducibility.py` `configure_environment` overwrites existing `PYTHONHASHSEED`, `MPLCONFIGDIR` and `TF_CPP_MIN_LOG_LEVEL` values. Setting `PYTHONHASHSEED` at runtime does not change hash randomization of the current process.
 - `src/models/base.py` (`BaseModel`) and `src/models/adapters.py` (`SklearnModelAdapter`): exported from `src/models/__init__.py` and tested, but not used by the pipeline or factory.

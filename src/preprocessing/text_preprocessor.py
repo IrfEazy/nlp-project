@@ -23,8 +23,8 @@ class TextPreprocessor:
 
     The preprocessing logic differs by model type:
     - Traditional ML (BoW, TF-IDF): remove_stopwords=True to reduce noise
-    - Transformers (DistilBERT): remove_stopwords=False because words like
-      "not", "but" carry sentiment signal
+    - Transformer-style models (not implemented here): remove_stopwords=False
+      because words like "not", "but" carry sentiment signal
 
     Example:
         >>> config = PreprocessingConfig(remove_stopwords=True)

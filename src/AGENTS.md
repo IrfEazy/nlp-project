@@ -33,14 +33,14 @@ Steps share one dict. `Workflow.run` copies the initial context, so callers keep
 - `PreprocessingConfig`: `min_df` 50, `max_df` 0.5, stopword removal, contraction expansion and lowercasing all on.
 - `ModelConfig`: `model_type` "bow", `random_seed` 42, `num_classes` 5, `max_iter` 1000.
 - `DataConfig`: dataset `yelp_review_full`, splits `train` and `test`, `sample_size` None (full data).
-- `ExperimentConfig` bundles the three plus `experiment_name`. Presets: `for_bow_baseline`, `for_tfidf`, `for_distilbert`.
+- `ExperimentConfig` bundles the three plus `experiment_name`. Presets: `for_bow_baseline`, `for_tfidf`; `for_model(model_type)` picks one by name and raises `ValueError` otherwise.
 
 ## Adding a model
 
 1. Subclass `ModelStrategy` in `models/strategies.py` (or a new module) implementing `train`, `predict`, `get_name`; take the model and preprocessing configs in the constructor.
 2. Build features through `VectorizerFactory`; add a creator there if a new vectorizer is needed.
 3. Register the class with `ModelFactory.register(name, cls)` or add it to the registry in `models/factory.py`.
-4. Add an `ExperimentConfig` preset whose `model_type` equals the registered name, then extend `run_single_model` and the `single` argv handling in `main` in `src/main.py` to expose it; otherwise `single <name>` silently runs bow.
+4. Register it in `ModelFactory` and add its preset to `ExperimentConfig.for_model`; `single <name>` picks it up.
 5. Add tests in `tests/test_models.py` and `tests/test_config.py`, and update the docs.
 
 ## Reproducibility

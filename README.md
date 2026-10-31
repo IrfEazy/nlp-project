@@ -10,7 +10,7 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). The first run downloa
     uv run python -m src.main baseline 5000
     uv run pytest
 
-The `baseline` argument compares both models; the number is an optional sample size for faster runs. Other modes (`single`, `custom`) are described in [AGENTS.md](AGENTS.md).
+The `baseline` argument compares both models; the number is an optional sample size for faster runs. `single [model] [sample_size]` runs one model (`bow` or `tfidf`). The `custom` mode is described in [AGENTS.md](AGENTS.md).
 
 ## More information
 
