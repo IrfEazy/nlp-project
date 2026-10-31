@@ -1,6 +1,6 @@
 # NLP project
 
-Classifies Yelp reviews into 5 star-rating classes (labels 0-4) using the Hugging Face `yelp_review_full` dataset, with scikit-learn Bag-of-Words or TF-IDF features and Logistic Regression. The code is a small layered package under `src/` driven by a step-based pipeline.
+Classifies Yelp reviews into 5 star-rating classes (labels 0-4) using the Hugging Face `Yelp/yelp_review_full` dataset, with scikit-learn Bag-of-Words or TF-IDF features and Logistic Regression. The code is a small layered package under `src/` driven by a step-based pipeline.
 
 ## Stack and commands
 

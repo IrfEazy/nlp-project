@@ -32,7 +32,7 @@ Steps share one dict. `Workflow.run` copies the initial context, so callers keep
 
 - `PreprocessingConfig`: `min_df` 50, `max_df` 0.5, stopword removal, contraction expansion and lowercasing all on.
 - `ModelConfig`: `model_type` "bow", `random_seed` 42, `num_classes` 5, `max_iter` 1000.
-- `DataConfig`: dataset `yelp_review_full`, splits `train` and `test`, `sample_size` None (full data).
+- `DataConfig`: dataset `Yelp/yelp_review_full`, splits `train` and `test`, `sample_size` None (full data).
 - `ExperimentConfig` bundles the three plus `experiment_name`. Presets: `for_bow_baseline`, `for_tfidf`; `for_model(model_type)` picks one by name and raises `ValueError` otherwise.
 
 ## Adding a model

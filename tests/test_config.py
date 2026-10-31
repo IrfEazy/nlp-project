@@ -19,7 +19,7 @@ class TestDataConfig:
         """DataConfig should have sensible defaults."""
         config = DataConfig()
 
-        assert config.dataset_name == "yelp_review_full"
+        assert config.dataset_name == "Yelp/yelp_review_full"
         assert config.train_split == "train"
         assert config.test_split == "test"
         assert config.sample_size is None
@@ -210,6 +210,6 @@ class TestConfigIntegration:
         config = ExperimentConfig.for_tfidf()
 
         # Should be able to access nested values
-        assert config.data.dataset_name == "yelp_review_full"
+        assert config.data.dataset_name == "Yelp/yelp_review_full"
         assert config.preprocessing.min_df == 50
         assert config.model.random_seed == 42

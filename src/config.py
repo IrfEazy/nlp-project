@@ -60,7 +60,7 @@ class DataConfig:
         sample_size: Optional limit on samples to load (None for full dataset).
     """
 
-    dataset_name: str = "yelp_review_full"
+    dataset_name: str = "Yelp/yelp_review_full"
     train_split: str = "train"
     test_split: str = "test"
     sample_size: Optional[int] = None

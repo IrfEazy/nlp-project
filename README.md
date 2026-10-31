@@ -1,6 +1,6 @@
 # NLP project
 
-Predicts the 1-5 star rating of Yelp reviews (five classes) from the Hugging Face `yelp_review_full` dataset, comparing Bag-of-Words and TF-IDF features with scikit-learn Logistic Regression.
+Predicts the 1-5 star rating of Yelp reviews (five classes) from the Hugging Face `Yelp/yelp_review_full` dataset, comparing Bag-of-Words and TF-IDF features with scikit-learn Logistic Regression.
 
 ## Quickstart
 

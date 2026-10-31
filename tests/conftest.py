@@ -86,7 +86,7 @@ def small_test_labels() -> list[int]:
 def default_data_config() -> DataConfig:
     """Default DataConfig for testing."""
     return DataConfig(
-        dataset_name="yelp_review_full",
+        dataset_name="Yelp/yelp_review_full",
         train_split="train",
         test_split="test",
         sample_size=100,  # Small sample for fast tests
