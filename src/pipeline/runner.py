@@ -12,6 +12,7 @@ from nltk.corpus import stopwords
 from src.config import DataConfig, ExperimentConfig
 from src.data.analyzer import DatasetAnalyzer, DatasetStats
 from src.data.loader import DataLoader
+from src.models.factory import ModelFactory
 from src.pipeline.steps import (
     EvaluateModelStep,
     LoadDataStep,
@@ -42,6 +43,9 @@ def run_experiment(
     """
     config = ExperimentConfig.named(name)
     config.data.sample_size = sample_size
+    if config.requires_extra:
+        # Fail before the dataset download when the extra is not installed.
+        ModelFactory.create(config.model.model_type, config)
 
     workflow = (
         WorkflowBuilder()

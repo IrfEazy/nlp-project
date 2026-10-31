@@ -227,6 +227,8 @@ class TestExperimentRegistry:
             "lr-bow-polarity",
             "lr-bow-no-neutral",
             "lr-bow-dbpedia",
+            "cnn-char",
+            "cnn-char-mixed-case",
         ]
 
     def test_every_name_builds_with_matching_experiment_name(self) -> None:

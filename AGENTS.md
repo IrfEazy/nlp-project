@@ -6,7 +6,7 @@ Classifies Yelp reviews into 5 star-rating classes (labels 0-4) using the Huggin
 
 Python 3.12, managed with `uv`. Run everything from the repository root.
 
-- `uv sync` installs dependencies.
+- `uv sync` installs dependencies; `uv sync --extra deep` adds the optional PyTorch extra (a plain `uv sync` removes it, and the deep tests then skip). Experiments `cnn-char` and `cnn-char-mixed-case` need it; a missing extra exits 1 naming this command.
 - `uv run python -m src.main baseline [sample_size]` compares BoW and TF-IDF (default mode).
 - `uv run python -m src.main single [model] [sample_size]` runs one model with plots (model defaults to `bow`; `single 1000` is valid); an unknown model, invalid (non-integer or non-positive) sample size or extra argument exits 1.
 - `uv run python -m src.main custom` runs the hand-composed workflow demo.
@@ -20,7 +20,7 @@ The first real run needs network access: it downloads the HF dataset and the NLT
 
 - Manage them only with `uv add`, `uv add --dev` and `uv remove`; never hand-edit dependency lists or `uv.lock`.
 - Add packages by bare name so uv writes its own `>=` lower bound: no exact pins, no `--raw` or `--bounds`.
-- Runtime dependencies are exactly what `src/` imports directly: declare every direct import (except the guarded optional torch/tensorflow imports in `src/utils/reproducibility.py`, see docs/known-issues.md), remove unused ones. Test tools go in the `dev` group.
+- Runtime dependencies are exactly what `src/` imports directly: declare every direct import (deep-learning ones such as `torch` go in the optional `deep` extra via `uv add --optional deep <pkg>`, imported only inside `src/models/deep/`; except the guarded optional torch/tensorflow imports in `src/utils/reproducibility.py`, see docs/known-issues.md), remove unused ones. Test tools go in the `dev` group.
 - `uv.lock` is tracked; commit it with `pyproject.toml`.
 - After a dependency change run the tests and the smoke run: re-resolution can bring major upgrades (see [src/AGENTS.md rules](src/AGENTS.md#rules)).
 
@@ -34,7 +34,7 @@ Docs, code and commit messages in English; reply to the user in the language the
 - `src/main.py`: command-line entry point.
 - `src/data/`: dataset loading, label tasks and statistics.
 - `src/preprocessing/`: text cleaning and vectorizer factory.
-- `src/models/`: model strategies and the model factory.
+- `src/models/`: model strategies and the model factory; `src/models/deep/`: PyTorch models and the shared training loop (`deep` extra).
 - `src/pipeline/`: pipeline steps, workflow builder and experiment/analysis runners.
 - `src/evaluation/`: metrics and plots.
 - `src/utils/`: reproducibility setup.

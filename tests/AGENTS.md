@@ -15,6 +15,7 @@
 
 ## Layout
 
+- `test_deep.py` covers `src/models/deep/`: it calls `pytest.importorskip("torch")` first, so it skips without the `deep` extra, and is the only test file that imports torch directly (besides `configure_environment`). Tiny configs only, no network.
 - One file per source package: `test_config.py`, `test_data.py`, `test_evaluation.py`, `test_models.py`, `test_pipeline.py`, `test_preprocessing.py`, `test_utils.py`, plus `test_main.py` for the entry point.
 - New package means a new `test_<package>.py` here.
 - Import project code as `from src.x import ...`.
@@ -33,5 +34,5 @@
   - `src.pipeline.steps.DataLoader` and `src.pipeline.steps.ModelFactory` for step tests.
   - `src.main.*` for workflow components, `configure_environment` and configs in entry-point tests.
 - Never hit the network in tests.
-- scikit-learn and NLTK run for real. Tests never import TensorFlow or torch directly, but `configure_environment` (called unpatched in `test_utils.py`) imports torch and tensorflow when installed; transformers is imported by neither code nor tests.
+- scikit-learn and NLTK run for real. Only `test_deep.py` imports torch directly; tests never import TensorFlow, but `configure_environment` (called unpatched in `test_utils.py`) imports torch and tensorflow when installed; transformers is imported by neither code nor tests.
 - In `test_evaluation.py`, the `TestResultsVisualizer` class selects the matplotlib `Agg` backend through an autouse fixture.

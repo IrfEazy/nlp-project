@@ -103,3 +103,10 @@ class ModelFactory:
             List of registered model type names.
         """
         return list(cls._strategies) + [n for n in cls._lazy if n not in cls._strategies]
+
+
+# Deep-learning strategies need the optional ``deep`` extra (torch).
+ModelFactory.register_lazy("cnn-char", "src.models.deep.char_cnn:CharCnnStrategy")
+ModelFactory.register_lazy(
+    "cnn-char-mixed-case", "src.models.deep.char_cnn:CharCnnMixedCaseStrategy"
+)

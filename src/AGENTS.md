@@ -37,6 +37,13 @@ Steps share one dict. `Workflow.run` copies the initial context, so callers keep
 - `ExperimentConfig` bundles the three plus `experiment_name` and `requires_extra`. Presets: `for_bow_baseline`, `for_tfidf`; `for_model(model_type)` picks one by name and raises `ValueError` otherwise.
 - Named experiments: the `EXPERIMENTS` dict in `config.py` is the single source (`ExperimentConfig.named`, `experiment_names`); the CLI lists and runs them. To add one, add an entry; if it needs an optional extra, set `requires_extra`, register its strategy with `ModelFactory.register_lazy`, and keep torch/transformers imports inside the strategy module so CLI start-up never imports them.
 
+## Deep models (`models/deep/`, optional `deep` extra)
+
+- Nothing may import `src.models.deep` or `torch` at module level outside this package; register strategies with `ModelFactory.register_lazy("name", "src.models.deep.<module>:Class")` and set `requires_extra="deep"` on the experiment. `training.py` raises an `ImportError` naming `uv sync --extra deep`; `run_experiment` builds the strategy first, so the error appears before any download.
+- `training.py` is the shared loop: `TrainingConfig` (lr, batch size, max epochs, `validation_split`, `monitor` `val_accuracy`|`val_loss`, `patience`, `restore_best_weights`, optional `reduce_lr_patience`/`reduce_lr_factor`), `fit(model, inputs, labels, config, seed)` returning a per-epoch history, `predict_classes`, `EarlyStopping`. Validation is the last fraction of a seeded shuffle (Keras `validation_split`); the model maps a batch of integer inputs to logits; device is CUDA if available.
+- Strategies encode their own inputs, seed torch from `ModelConfig.random_seed`, take the class count from the training labels and use the same encoder in `predict`.
+- `char_cnn.py`: `CharCnnStrategy` (70-char alphabet, lowercased) and `CharCnnMixedCaseStrategy` (96 chars), experiments `cnn-char` and `cnn-char-mixed-case`.
+
 ## Adding a model
 
 1. Subclass `ModelStrategy` in `models/strategies.py` (or a new module) implementing `train`, `predict`, `get_name`; take the model and preprocessing configs in the constructor.

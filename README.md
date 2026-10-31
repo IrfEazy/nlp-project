@@ -6,11 +6,11 @@ Predicts the 1-5 star rating of Yelp reviews (five classes) from the Hugging Fac
 
 Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). The first run downloads the dataset and NLTK stopwords, so it needs network access.
 
-    uv sync
+    uv sync                # add --extra deep for the PyTorch models
     uv run python -m src.main baseline 5000
     uv run pytest
 
-The `baseline` argument compares both models; the number is an optional sample size for faster runs. `single [model] [sample_size]` runs one model (`bow` or `tfidf`). `experiments` lists named experiments, `experiment <name> [sample_size]` runs one and `analyze [sample_size]` prints dataset statistics. The `custom` mode is described in [AGENTS.md](AGENTS.md).
+The `baseline` argument compares both models; the number is an optional sample size for faster runs. `single [model] [sample_size]` runs one model (`bow` or `tfidf`). `experiments` lists named experiments, `experiment <name> [sample_size]` runs one and `analyze [sample_size]` prints dataset statistics. The deep experiments (`cnn-char`, `cnn-char-mixed-case`) need the optional PyTorch extra: `uv sync --extra deep`. The `custom` mode is described in [AGENTS.md](AGENTS.md).
 
 ## More information
 

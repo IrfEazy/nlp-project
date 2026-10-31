@@ -183,6 +183,22 @@ def _lr_experiment(
     return build
 
 
+def _deep_experiment(
+    name: str, model_type: str, data: Optional[DataConfig] = None
+) -> Callable[[], ExperimentConfig]:
+    """Build a preset factory for a deep-learning experiment (needs the 'deep' extra)."""
+
+    def build() -> ExperimentConfig:
+        return ExperimentConfig(
+            data=DataConfig(**vars(data)) if data else DataConfig(),
+            model=ModelConfig(model_type=model_type),
+            experiment_name=name,
+            requires_extra="deep",
+        )
+
+    return build
+
+
 # Single source of named experiments (the original notebook's classical runs).
 # Later packages add entries here; entries that need an optional extra set
 # ExperimentConfig.requires_extra and keep heavy imports out of this module.
@@ -207,4 +223,6 @@ EXPERIMENTS: Dict[str, Callable[[], ExperimentConfig]] = {
         "bow",
         DataConfig(dataset_name="fancyzhx/dbpedia_14", task="dbpedia14", text_field="content"),
     ),
+    "cnn-char": _deep_experiment("cnn-char", "cnn-char"),
+    "cnn-char-mixed-case": _deep_experiment("cnn-char-mixed-case", "cnn-char-mixed-case"),
 }
