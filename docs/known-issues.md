@@ -15,4 +15,4 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 
 ## Configuration and tooling
 
-- `.env.example` sets empty `TF_CPP_MIN_LOG_LEVEL`, `PYTHONHASHSEED` and `MPLCONFIGDIR`, plus `WANDB_DISABLED` and `HF_TOKEN`, which no code reads. Nothing loads a `.env` file.
+- `.env.example` sets empty `TF_CPP_MIN_LOG_LEVEL`, `PYTHONHASHSEED` and `MPLCONFIGDIR`, plus `WANDB_DISABLED` and `HF_TOKEN`; no project code reads `HF_TOKEN` or `WANDB_DISABLED` (huggingface_hub reads `HF_TOKEN` from the environment). Nothing loads a `.env` file.

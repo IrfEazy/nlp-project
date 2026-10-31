@@ -4,9 +4,14 @@
 
 - Pytest settings live in `pyproject.toml`: tests under `tests/`, files `test_*.py`, classes `Test*`, functions `test_*`.
 - Options `--strict-markers -v` are on, so unregistered markers fail.
-- Markers: `unit` (fast, isolated), `integration` (may use external resources).
+- Registered markers are only `unit` (fast, isolated) and `integration` (may use external resources).
 - Every test class must carry `unit` or `integration`, applied as a class decorator.
 - Coverage measures `src` and omits `__init__.py` files.
+
+## Workflow
+
+- New behaviour ships with tests in the matching test file.
+- The full suite (`uv run pytest`) must pass before committing.
 
 ## Layout
 

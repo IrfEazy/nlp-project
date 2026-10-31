@@ -3,7 +3,7 @@
 ## Module responsibilities and patterns
 
 - `config.py`: settings as dataclasses, passed into constructors (config dependency injection). `ExperimentConfig` classmethods act as presets.
-- `data/loader.py`: `DataLoader` reads the HF dataset lazily per split and caches it. `sample_size` keeps the first N rows (head slice, not random). `data/analyzer.py`: `DatasetAnalyzer` computes statistics.
+- `data/loader.py`: `DataLoader` reads the HF dataset lazily per split and caches it; `sample_size` caveat in [known issues](../docs/known-issues.md#behavior). `data/analyzer.py`: `DatasetAnalyzer` computes statistics.
 - `preprocessing/text_preprocessor.py`: `TextPreprocessor` cleans text (contractions, punctuation, NLTK stopwords). `preprocessing/feature_engineer.py`: `VectorizerFactory` (Factory) builds BoW and TF-IDF vectorizers; never instantiate sklearn vectorizers directly.
 - `models/strategies.py`: `ModelStrategy` ABC (Strategy) with `train`, `predict`, `get_name`; implementations `BowLogisticStrategy` and `TfidfLogisticStrategy`, which also expose vocabulary size and top features. `models/factory.py`: `ModelFactory` (Factory) with a class-level registry. `models/base.py` and `models/adapters.py`: `BaseModel` and `SklearnModelAdapter` (Adapter); see [known issues](../docs/known-issues.md#behavior) for their status.
 - `pipeline/steps.py`: `PipelineStep` ABC with `execute(context)` and `get_name`; four concrete steps. `pipeline/workflow.py`: `Workflow` simply runs the steps in order on a copy of the initial context; `WorkflowBuilder` (Builder) is fluent and `build()` raises `ValueError` when empty.
@@ -41,6 +41,12 @@ Steps share one dict. `Workflow.run` copies the initial context, so callers keep
 2. Build features through `VectorizerFactory`; add a creator there if a new vectorizer is needed.
 3. Register the class in `ModelFactory` (`ModelFactory.register(name, cls)` or the registry in `models/factory.py`) and add its preset to `ExperimentConfig.for_model`; `single <name>` picks it up.
 4. Add tests in `tests/test_models.py` and `tests/test_config.py`, and update the docs.
+
+## Rules
+
+- CLI input errors fail loudly (message and exit 1), never silent fallbacks.
+- Keep no presets or config for a model without a registered strategy.
+- Hugging Face dataset ids use the canonical `namespace/name` form; huggingface-hub 2.x rejects bare legacy ids.
 
 ## Reproducibility
 
