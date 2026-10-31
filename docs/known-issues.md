@@ -4,9 +4,8 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 
 ## Dependencies (`pyproject.toml`)
 
-- `gensim>=4` in `dependencies` is declared but nothing in `src/` or `tests/` imports it.
-- `accelerate`, `tensorflow`, `tf-keras` and `transformers` are declared but no code imports them; `src/utils/reproducibility.py` `configure_environment` imports `tensorflow` only optionally.
-- `torch` is imported optionally in `src/utils/reproducibility.py` `configure_environment` but not declared.
+- `torch` and `tensorflow` are optional guarded imports in `src/utils/reproducibility.py` `configure_environment`; neither is declared, and seeding is skipped when they are absent.
+- `matplotlib` (`src/evaluation/visualizer.py`) and `numpy` are imported by `src/` but are only available transitively (for example through seaborn and scikit-learn); neither is declared in `pyproject.toml`.
 - `pytest` and `pytest-cov` are in runtime `dependencies`, not a dev group.
 - `description` is still the placeholder text.
 
@@ -23,4 +22,3 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 
 - `.env.example` sets empty `TF_CPP_MIN_LOG_LEVEL`, `PYTHONHASHSEED` and `MPLCONFIGDIR`, plus `WANDB_DISABLED` and `HF_TOKEN`, which no code reads. Nothing loads a `.env` file.
 - The `slow` pytest marker is registered in `pyproject.toml` but no test uses it.
-- `uv.lock` is untracked in git.
