@@ -6,11 +6,11 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "contractions>=0.1.73",
-    "datasets>=4.5.0",
-    "matplotlib",
-    "nltk>=3.9.2",
-    "numpy",
-    "scikit-learn>=1.8.0",
+    "datasets>=5.1.0",
+    "matplotlib>=3.11.2",
+    "nltk>=3.10.4",
+    "numpy>=2.5.4",
+    "scikit-learn>=1.9.1",
     "seaborn>=0.13.2",
 ]
 
@@ -38,6 +38,6 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
-    "pytest",
-    "pytest-cov",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
 ]
