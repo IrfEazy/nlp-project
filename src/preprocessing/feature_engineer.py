@@ -6,9 +6,22 @@ consistent configuration. Never instantiate vectorizers directly -
 use VectorizerFactory for consistency.
 """
 
-from typing import Optional
+import string
+from typing import List, Optional
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+
+
+_PUNCTUATION_TABLE = str.maketrans("", "", string.punctuation)
+
+
+def delete_punctuation(texts: List[str]) -> List[str]:
+    """Delete every ``string.punctuation`` character (replace with '').
+
+    Matches the original notebook's pre-vectorizer cleaning: "don't" becomes
+    "dont" and "a,b" becomes "ab".
+    """
+    return [text.translate(_PUNCTUATION_TABLE) for text in texts]
 
 
 class VectorizerFactory:

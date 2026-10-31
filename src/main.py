@@ -5,6 +5,9 @@ Usage:
     uv run python -m src.main baseline [sample_size]
     uv run python -m src.main single [model] [sample_size]
     uv run python -m src.main custom
+    uv run python -m src.main experiments
+    uv run python -m src.main experiment <name> [sample_size]
+    uv run python -m src.main analyze [sample_size]
 """
 
 import sys
@@ -19,6 +22,8 @@ from .pipeline import (
     TrainModelStep,
     VisualizeResultsStep,
     WorkflowBuilder,
+    run_analysis,
+    run_experiment,
 )
 from .utils import configure_environment
 
@@ -28,7 +33,13 @@ USAGE = """Usage:
   uv run python -m src.main single [model] [sample_size]
       Single model (bow/tfidf)
   uv run python -m src.main custom
-      Custom workflow example"""
+      Custom workflow example
+  uv run python -m src.main experiments
+      List named experiments
+  uv run python -m src.main experiment <name> [sample_size]
+      Run a named experiment
+  uv run python -m src.main analyze [sample_size]
+      Print dataset statistics"""
 
 
 def run_baseline_comparison(sample_size: Optional[int] = None) -> None:
@@ -226,7 +237,10 @@ def main() -> None:
         if len(args) > 1:
             _fail(f"Too many arguments for baseline: {' '.join(args)}", True)
         sample_size = _parse_sample_size(args[0]) if args else None
-        run_baseline_comparison(sample_size=sample_size)
+        try:
+            run_baseline_comparison(sample_size=sample_size)
+        except (ValueError, ImportError) as exc:
+            _fail(str(exc))
     elif mode == "single":
         model_type = "bow"
         if args and not _looks_like_int(args[0]):
@@ -238,11 +252,40 @@ def main() -> None:
         except ValueError as exc:
             _fail(str(exc))
         sample_size = _parse_sample_size(args[0]) if args else None
-        run_single_model(model_type=model_type, sample_size=sample_size)
+        try:
+            run_single_model(model_type=model_type, sample_size=sample_size)
+        except (ValueError, ImportError) as exc:
+            _fail(str(exc))
     elif mode == "custom":
         if args:
             _fail(f"custom takes no arguments: {' '.join(args)}", True)
         run_custom_workflow_example()
+    elif mode == "experiments":
+        if args:
+            _fail(f"experiments takes no arguments: {' '.join(args)}", True)
+        for name in ExperimentConfig.experiment_names():
+            print(name)
+    elif mode == "experiment":
+        if not args:
+            _fail("experiment requires a name", True)
+        name = args.pop(0)
+        if name not in ExperimentConfig.experiment_names():
+            _fail(
+                f"Unknown experiment '{name}'. Available experiments: "
+                f"{', '.join(ExperimentConfig.experiment_names())}"
+            )
+        if len(args) > 1:
+            _fail(f"Too many arguments for experiment: {' '.join(args)}", True)
+        sample_size = _parse_sample_size(args[0]) if args else None
+        try:
+            run_experiment(name, sample_size=sample_size)
+        except (ValueError, ImportError) as exc:
+            _fail(str(exc))
+    elif mode == "analyze":
+        if len(args) > 1:
+            _fail(f"Too many arguments for analyze: {' '.join(args)}", True)
+        sample_size = _parse_sample_size(args[0]) if args else None
+        run_analysis(sample_size=sample_size)
     else:
         _fail(f"Unknown mode: {mode}", True)
 

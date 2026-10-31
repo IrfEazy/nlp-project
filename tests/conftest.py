@@ -111,7 +111,6 @@ def default_model_config() -> ModelConfig:
     return ModelConfig(
         model_type="bow",
         random_seed=42,
-        num_classes=5,
         max_iter=100,  # Fewer iterations for fast tests
     )
 

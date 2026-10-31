@@ -350,3 +350,110 @@ class TestMain:
 
             mock_configure.assert_called_once_with(seed=42)
             mock_configure.assert_called_once_with(seed=42)
+
+
+@pytest.mark.unit
+class TestExperimentModes:
+    """CLI paths for experiments, experiment <name> and analyze."""
+
+    def run_main(self, *argv):
+        with (
+            patch("src.main.configure_environment"),
+            patch.object(sys, "argv", ["main.py", *argv]),
+        ):
+            main()
+
+    def test_experiments_lists_names(self, capsys) -> None:
+        self.run_main("experiments")
+        out = capsys.readouterr().out.split()
+        assert "lr-bow" in out and "lr-bow-dbpedia" in out
+
+    def test_experiments_rejects_args(self) -> None:
+        with pytest.raises(SystemExit) as exc:
+            self.run_main("experiments", "x")
+        assert exc.value.code == 1
+
+    def test_experiment_runs_with_sample_size(self) -> None:
+        with patch("src.main.run_experiment") as mock_run:
+            self.run_main("experiment", "lr-tfidf", "500")
+        mock_run.assert_called_once_with("lr-tfidf", sample_size=500)
+
+    def test_experiment_without_sample_size(self) -> None:
+        with patch("src.main.run_experiment") as mock_run:
+            self.run_main("experiment", "lr-bow")
+        mock_run.assert_called_once_with("lr-bow", sample_size=None)
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ("experiment",),
+            ("experiment", "nope"),
+            ("experiment", "lr-bow", "abc"),
+            ("experiment", "lr-bow", "0"),
+            ("experiment", "lr-bow", "5", "6"),
+        ],
+    )
+    def test_experiment_bad_input_exits_1(self, argv) -> None:
+        with patch("src.main.run_experiment") as mock_run:
+            with pytest.raises(SystemExit) as exc:
+                self.run_main(*argv)
+        assert exc.value.code == 1
+        mock_run.assert_not_called()
+
+    def test_experiment_missing_extra_exits_1(self, capsys) -> None:
+        with patch("src.main.run_experiment", side_effect=ImportError("uv sync --extra deep")):
+            with pytest.raises(SystemExit) as exc:
+                self.run_main("experiment", "lr-bow")
+        assert exc.value.code == 1
+        assert "--extra deep" in capsys.readouterr().out
+
+    def test_analyze(self) -> None:
+        with patch("src.main.run_analysis") as mock_run:
+            self.run_main("analyze", "100")
+        mock_run.assert_called_once_with(sample_size=100)
+
+    @pytest.mark.parametrize("argv", [("analyze", "x"), ("analyze", "-1"), ("analyze", "1", "2")])
+    def test_analyze_bad_input_exits_1(self, argv) -> None:
+        with patch("src.main.run_analysis") as mock_run:
+            with pytest.raises(SystemExit) as exc:
+                self.run_main(*argv)
+        assert exc.value.code == 1
+        mock_run.assert_not_called()
+
+
+@pytest.mark.unit
+class TestErrorMapping:
+    """ValueError/ImportError from running models exit 1 with the message."""
+
+    @pytest.mark.parametrize("exc", [ValueError("only 1 class"), ImportError("--extra deep")])
+    @pytest.mark.parametrize(
+        ("argv", "target"),
+        [
+            (["baseline"], "run_baseline_comparison"),
+            (["single", "bow"], "run_single_model"),
+            (["experiment", "lr-bow"], "run_experiment"),
+        ],
+    )
+    def test_error_exits_1(self, argv, target, exc, capsys) -> None:
+        with (
+            patch("src.main.configure_environment"),
+            patch(f"src.main.{target}", side_effect=exc),
+            patch.object(sys, "argv", ["main.py", *argv]),
+        ):
+            with pytest.raises(SystemExit) as info:
+                main()
+        assert info.value.code == 1
+        assert str(exc) in capsys.readouterr().out
+
+
+@pytest.mark.unit
+def test_importing_main_does_not_import_torch_or_transformers() -> None:
+    import subprocess
+
+    code = (
+        "import sys, src.main; "
+        "bad = [m for m in ('torch', 'transformers') if m in sys.modules]; "
+        "sys.exit(1 if bad else 0)"
+    )
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr

@@ -5,7 +5,8 @@ Each step performs a specific operation and reads/writes from a shared
 context dictionary (like middleware in web frameworks).
 
 Context Keys Convention:
-- LoadDataStep writes: train_texts, train_labels, test_texts, test_labels
+- LoadDataStep writes: train_texts, train_labels, test_texts, test_labels,
+  class_names (task labels 0..n-1)
 - TrainModelStep reads: train_texts, train_labels; writes: trained_strategy, predictions
 - EvaluateModelStep reads: predictions, test_labels; writes: metrics
 - VisualizeResultsStep reads: metrics; displays confusion matrix
@@ -60,9 +61,10 @@ class LoadDataStep(PipelineStep):
 
     Writes to context:
         - train_texts: List of training document strings
-        - train_labels: List of training labels (0-4)
+        - train_labels: List of training labels (task labels)
         - test_texts: List of test document strings
-        - test_labels: List of test labels (0-4)
+        - test_labels: List of test labels (task labels)
+        - class_names: Class names of the configured label task
     """
 
     def __init__(self, config: ExperimentConfig) -> None:
@@ -93,6 +95,7 @@ class LoadDataStep(PipelineStep):
         context["train_labels"] = train_labels
         context["test_texts"] = test_texts
         context["test_labels"] = test_labels
+        context["class_names"] = loader.class_names
 
         print(f"Loaded {len(train_texts)} training and {len(test_texts)} test samples")
 
@@ -134,12 +137,21 @@ class TrainModelStep(PipelineStep):
 
         Raises:
             KeyError: If required context keys are missing.
+            ValueError: If the training labels contain fewer than 2 classes.
         """
         # Validate required context keys
         required_keys = ["train_texts", "train_labels", "test_texts"]
         for key in required_keys:
             if key not in context:
                 raise KeyError(f"TrainModelStep requires '{key}' in context")
+
+        n_classes = len(set(context["train_labels"]))
+        if n_classes < 2:
+            raise ValueError(
+                f"Training data has {n_classes} class(es); at least 2 are required. "
+                "sample_size takes the first N rows, so label-sorted datasets "
+                "(e.g. DBpedia) need a larger sample_size."
+            )
 
         # Create and train strategy
         model_type = self.config.model.model_type
@@ -178,9 +190,10 @@ class EvaluateModelStep(PipelineStep):
         """Initialize with optional class names.
 
         Args:
-            class_names: Human-readable names for classes.
+            class_names: Human-readable names for classes. If omitted, the
+                context's ``class_names`` is used, else the five Yelp stars.
         """
-        self.class_names = class_names or ["0", "1", "2", "3", "4"]
+        self.class_names = class_names
 
     def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Evaluate predictions and compute metrics.
@@ -201,7 +214,9 @@ class EvaluateModelStep(PipelineStep):
 
         print("Evaluating model performance...")
 
-        evaluator = ModelEvaluator(class_names=self.class_names)
+        evaluator = ModelEvaluator(
+            class_names=self.class_names or context.get("class_names")
+        )
         metrics = evaluator.evaluate(context["test_labels"], context["predictions"])
 
         context["metrics"] = metrics
@@ -233,10 +248,11 @@ class VisualizeResultsStep(PipelineStep):
 
         Args:
             show_plots: Whether to display matplotlib plots.
-            class_names: Human-readable names for classes.
+            class_names: Human-readable names for classes. If omitted, the
+                context's ``class_names`` is used, else the five Yelp stars.
         """
         self.show_plots = show_plots
-        self.class_names = class_names or ["0", "1", "2", "3", "4"]
+        self.class_names = class_names
 
     def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Visualize evaluation results.
@@ -254,7 +270,9 @@ class VisualizeResultsStep(PipelineStep):
             raise KeyError("VisualizeResultsStep requires 'metrics' in context")
 
         metrics = context["metrics"]
-        visualizer = ResultsVisualizer(class_names=self.class_names)
+        visualizer = ResultsVisualizer(
+            class_names=self.class_names or context.get("class_names")
+        )
 
         # Get model name if available
         model_name = "Model"

@@ -80,19 +80,19 @@ class TestModelConfig:
 
         assert config.model_type == "bow"
         assert config.random_seed == 42
-        assert config.num_classes == 5
-        assert config.max_iter == 1000
+        assert config.max_iter == 100
+        assert config.class_weight is None
 
     def test_custom_values(self) -> None:
         """ModelConfig should accept custom values."""
         config = ModelConfig(
-            model_type="tfidf", random_seed=123, num_classes=3, max_iter=500
+            model_type="tfidf", random_seed=123, max_iter=500, class_weight="balanced"
         )
 
         assert config.model_type == "tfidf"
         assert config.random_seed == 123
-        assert config.num_classes == 3
         assert config.max_iter == 500
+        assert config.class_weight == "balanced"
 
 
 @pytest.mark.unit
@@ -213,3 +213,69 @@ class TestConfigIntegration:
         assert config.data.dataset_name == "Yelp/yelp_review_full"
         assert config.preprocessing.min_df == 50
         assert config.model.random_seed == 42
+
+
+@pytest.mark.unit
+class TestExperimentRegistry:
+    """Tests for the named experiment registry."""
+
+    def test_names(self) -> None:
+        assert ExperimentConfig.experiment_names() == [
+            "lr-bow",
+            "lr-tfidf",
+            "lr-bow-3class",
+            "lr-bow-polarity",
+            "lr-bow-no-neutral",
+            "lr-bow-dbpedia",
+        ]
+
+    def test_every_name_builds_with_matching_experiment_name(self) -> None:
+        for name in ExperimentConfig.experiment_names():
+            assert ExperimentConfig.named(name).experiment_name == name
+
+    def test_named_returns_fresh_configs(self) -> None:
+        first = ExperimentConfig.named("lr-bow-3class")
+        first.data.sample_size = 5
+        assert ExperimentConfig.named("lr-bow-3class").data.sample_size is None
+
+    def test_unknown_name_raises(self) -> None:
+        with pytest.raises(ValueError, match="lr-bow"):
+            ExperimentConfig.named("nope")
+
+    def test_vectorizer_params_as_notebook(self) -> None:
+        config = ExperimentConfig.named("lr-tfidf")
+        assert config.preprocessing.min_df == 50
+        assert config.preprocessing.max_df == 0.5
+        assert config.preprocessing.remove_stopwords
+        assert config.model.model_type == "tfidf"
+        assert config.model.max_iter == 100
+
+    def test_three_class(self) -> None:
+        config = ExperimentConfig.named("lr-bow-3class")
+        assert config.data.task == "stars3"
+        assert config.model.class_weight == "balanced"
+        assert not config.preprocessing.strip_punctuation
+
+    def test_polarity(self) -> None:
+        config = ExperimentConfig.named("lr-bow-polarity")
+        assert config.data.task == "polarity"
+        assert config.model.class_weight == "balanced"
+        assert config.preprocessing.strip_punctuation
+
+    def test_no_neutral_uses_defaults(self) -> None:
+        config = ExperimentConfig.named("lr-bow-no-neutral")
+        assert config.data.task == "polarity_no_neutral"
+        assert config.model.class_weight is None
+        assert not config.preprocessing.strip_punctuation
+
+    def test_dbpedia(self) -> None:
+        config = ExperimentConfig.named("lr-bow-dbpedia")
+        assert config.data.dataset_name == "fancyzhx/dbpedia_14"
+        assert config.data.text_field == "content"
+        assert config.data.task == "dbpedia14"
+
+    def test_default_experiments_use_raw_text(self) -> None:
+        for name in ("lr-bow", "lr-tfidf"):
+            config = ExperimentConfig.named(name)
+            assert config.data.task == "stars5"
+            assert not config.preprocessing.strip_punctuation

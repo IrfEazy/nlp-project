@@ -9,7 +9,7 @@ import re
 import string
 from collections import Counter
 from dataclasses import dataclass
-from typing import List, Set
+from typing import Collection, List, Optional, Set
 
 
 @dataclass
@@ -21,12 +21,15 @@ class DatasetStats:
         avg_document_length: Average character count per document.
         total_vocabulary: Total unique words in the corpus.
         avg_vocabulary_per_doc: Average unique words per document.
+        vocabulary_without_stopwords: Vocabulary size minus the analyzer's
+            stopwords, or None when no stopwords were given.
     """
 
     num_documents: int
     avg_document_length: float
     total_vocabulary: int
     avg_vocabulary_per_doc: float
+    vocabulary_without_stopwords: Optional[int] = None
 
 
 class DatasetAnalyzer:
@@ -41,14 +44,22 @@ class DatasetAnalyzer:
         >>> print(f"Avg length: {stats.avg_document_length:.2f}")
     """
 
-    def __init__(self, remove_punctuation: bool = True) -> None:
+    def __init__(
+        self,
+        remove_punctuation: bool = True,
+        stopwords: Optional[Collection[str]] = None,
+    ) -> None:
         """Initialize the analyzer.
 
         Args:
-            remove_punctuation: Whether to remove punctuation when computing
-                vocabulary statistics.
+            remove_punctuation: Whether to delete punctuation (replace with
+                '', as the original notebook) when computing vocabulary
+                statistics.
+            stopwords: Optional stopword list (e.g. NLTK English); when given,
+                stats include the vocabulary size without them.
         """
         self.remove_punctuation = remove_punctuation
+        self.stopwords = set(stopwords) if stopwords is not None else None
         self._punctuation_pattern = "[" + string.punctuation + "]"
 
     def compute_stats(self, texts: List[str]) -> DatasetStats:
@@ -85,11 +96,15 @@ class DatasetAnalyzer:
             total_vocab.update(unique_words)
             total_unique_per_doc += len(unique_words)
 
+        without_stopwords = (
+            len(total_vocab - self.stopwords) if self.stopwords is not None else None
+        )
         return DatasetStats(
             num_documents=num_docs,
             avg_document_length=total_length / num_docs,
             total_vocabulary=len(total_vocab),
             avg_vocabulary_per_doc=total_unique_per_doc / num_docs,
+            vocabulary_without_stopwords=without_stopwords,
         )
 
     def _clean_for_vocab(self, text: str) -> str:
@@ -102,7 +117,7 @@ class DatasetAnalyzer:
             Cleaned text with punctuation optionally removed.
         """
         if self.remove_punctuation:
-            return re.sub(self._punctuation_pattern, " ", text)
+            return re.sub(self._punctuation_pattern, "", text)
         return text
 
     def compute_avg_document_length(self, texts: List[str]) -> float:

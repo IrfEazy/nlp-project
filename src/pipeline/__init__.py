@@ -1,5 +1,6 @@
 """Pipeline module for workflow orchestration."""
 
+from src.pipeline.runner import run_analysis, run_experiment
 from src.pipeline.steps import (
     EvaluateModelStep,
     LoadDataStep,
@@ -17,4 +18,6 @@ __all__ = [
     "VisualizeResultsStep",
     "Workflow",
     "WorkflowBuilder",
+    "run_analysis",
+    "run_experiment",
 ]

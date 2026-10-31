@@ -10,6 +10,7 @@ Python 3.12, managed with `uv`. Run everything from the repository root.
 - `uv run python -m src.main baseline [sample_size]` compares BoW and TF-IDF (default mode).
 - `uv run python -m src.main single [model] [sample_size]` runs one model with plots (model defaults to `bow`; `single 1000` is valid); an unknown model, invalid (non-integer or non-positive) sample size or extra argument exits 1.
 - `uv run python -m src.main custom` runs the hand-composed workflow demo.
+- `uv run python -m src.main experiments` lists the named experiments (`lr-bow`, `lr-tfidf`, `lr-bow-3class`, `lr-bow-polarity`, `lr-bow-no-neutral`, `lr-bow-dbpedia`); `experiment <name> [sample_size]` runs one (summary, classification report, top-10 features per class, plots); `analyze [sample_size]` prints dataset statistics (downloads the NLTK stopwords corpus). Unknown names, bad sample sizes and extra arguments exit 1.
 - Smoke run: `MPLBACKEND=Agg uv run python -m src.main single bow 1000` (Agg avoids blocking plot windows when headless). It downloads the dataset. Observed 2026-10-31: the unauthenticated HF warning without `HF_TOKEN` is harmless, and accuracy near 0.33 on 1000 samples is expected and is not a quality measure.
 - `uv run pytest` runs all tests; `uv run pytest -m unit` runs only unit tests; `uv run pytest --cov=src` adds coverage.
 
@@ -31,10 +32,10 @@ Docs, code and commit messages in English; reply to the user in the language the
 
 - `src/config.py`: configuration dataclasses and experiment factories.
 - `src/main.py`: command-line entry point.
-- `src/data/`: dataset loading and statistics.
+- `src/data/`: dataset loading, label tasks and statistics.
 - `src/preprocessing/`: text cleaning and vectorizer factory.
 - `src/models/`: model strategies and the model factory.
-- `src/pipeline/`: pipeline steps and workflow builder.
+- `src/pipeline/`: pipeline steps, workflow builder and experiment/analysis runners.
 - `src/evaluation/`: metrics and plots.
 - `src/utils/`: reproducibility setup.
 - `tests/`: pytest suite mirroring `src/`.

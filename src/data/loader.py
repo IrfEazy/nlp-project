@@ -10,6 +10,7 @@ from typing import List, Tuple
 from datasets import load_dataset
 
 from src.config import DataConfig
+from src.data.tasks import LabelTask, get_task
 
 
 class DataLoader:
@@ -35,6 +36,7 @@ class DataLoader:
             config: Configuration specifying dataset and sampling parameters.
         """
         self.config = config
+        self.task: LabelTask = get_task(config.task)
         self._train_dataset = None
         self._test_dataset = None
 
@@ -67,7 +69,10 @@ class DataLoader:
         return self._extract_texts_labels(self._test_dataset)
 
     def _extract_texts_labels(self, dataset) -> Tuple[List[str], List[int]]:
-        """Extract texts and labels from a HuggingFace dataset.
+        """Extract texts and labels, apply the label task, then sample.
+
+        The task runs before first-N sampling, so ``sample_size`` counts rows
+        that survive the task (relevant when a task drops rows).
 
         Args:
             dataset: A HuggingFace Dataset object.
@@ -75,23 +80,30 @@ class DataLoader:
         Returns:
             Tuple of (texts, labels) lists, optionally sampled.
         """
-        texts = dataset["text"]
-        labels = dataset["label"]
+        texts, labels = self.task.apply(
+            dataset[self.config.text_field], dataset[self.config.label_field]
+        )
 
-        # Apply sampling if configured
         if self.config.sample_size is not None:
             sample_size = min(self.config.sample_size, len(texts))
             texts = texts[:sample_size]
             labels = labels[:sample_size]
 
-        return list(texts), list(labels)
+        return texts, labels
 
     @property
     def num_classes(self) -> int:
-        """Number of classes in the dataset (5 for Yelp: 0-4 stars)."""
-        return 5
+        """Number of classes of the configured task."""
+        return self.task.num_classes
 
     @property
     def class_names(self) -> List[str]:
-        """Human-readable class names."""
-        return ["0", "1", "2", "3", "4"]
+        """Class names: from the task, else dataset features, else digits."""
+        if self.task.class_names is not None:
+            return list(self.task.class_names)
+        features = getattr(self._train_dataset, "features", None)
+        feature = features.get(self.config.label_field) if features else None
+        names = getattr(feature, "names", None)
+        if names and len(names) == self.num_classes:
+            return [str(n) for n in names]
+        return [str(i) for i in range(self.num_classes)]

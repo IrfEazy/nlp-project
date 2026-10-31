@@ -12,7 +12,9 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+from src.config import ExperimentConfig
 from src.evaluation.evaluator import EvaluationMetrics
+from src.pipeline.runner import run_analysis, run_experiment
 from src.pipeline.steps import (
     EvaluateModelStep,
     LoadDataStep,
@@ -112,6 +114,14 @@ class TestPipelineSteps:
             step = TrainModelStep(default_experiment_config)
 
             assert step.get_name() == "Train Model"
+
+    class TestTrainModelStepSingleClass:
+        def test_single_class_raises_before_fitting(self, default_experiment_config) -> None:
+            context = {"train_texts": ["a", "b"], "train_labels": [3, 3], "test_texts": ["c"]}
+            with patch("src.pipeline.steps.ModelFactory") as factory:
+                with pytest.raises(ValueError, match=r"1 class.*sample_size"):
+                    TrainModelStep(default_experiment_config).execute(context)
+            factory.create.assert_not_called()
 
     class TestEvaluateModelStep:
         """Tests for EvaluateModelStep."""
@@ -365,6 +375,7 @@ class TestPipelineIntegration:
         mock_loader = MagicMock()
         mock_loader.load_train.return_value = (["text1", "text2"], [0, 1])
         mock_loader.load_test.return_value = (["test1", "test2"], [0, 1])
+        mock_loader.class_names = ["0", "1", "2", "3", "4"]
         mock_loader_class.return_value = mock_loader
 
         mock_strategy = MagicMock()
@@ -391,3 +402,74 @@ class TestPipelineIntegration:
         assert "metrics" in result
         assert result["metrics"].accuracy == 1.0  # Perfect predictions in mock
         assert result["metrics"].accuracy == 1.0  # Perfect predictions in mock
+
+
+@pytest.mark.unit
+class TestClassNamesFromContext:
+    """Evaluate/Visualize steps take class names from the loaded task."""
+
+    def test_evaluate_uses_context_class_names(self) -> None:
+        context = {
+            "predictions": np.array([0, 1, 1]),
+            "test_labels": [0, 1, 0],
+            "class_names": ["neg", "pos"],
+        }
+        result = EvaluateModelStep().execute(context)
+        assert len(result["metrics"].confusion_matrix) == 2
+        assert "neg" in result["metrics"].classification_report
+
+    def test_evaluate_explicit_names_win(self) -> None:
+        context = {
+            "predictions": np.array([0, 1]),
+            "test_labels": [0, 1],
+            "class_names": ["neg", "pos"],
+        }
+        result = EvaluateModelStep(class_names=["a", "b"]).execute(context)
+        assert "a" in result["metrics"].classification_report
+
+    def test_evaluate_defaults_to_five_stars(self) -> None:
+        context = {"predictions": np.array([0, 4]), "test_labels": [0, 4]}
+        result = EvaluateModelStep().execute(context)
+        assert result["metrics"].confusion_matrix.shape == (5, 5)
+
+    def test_load_step_writes_class_names(self) -> None:
+        with patch("src.pipeline.steps.DataLoader") as mock_loader:
+            loader = mock_loader.return_value
+            loader.load_train.return_value = (["a"], [0])
+            loader.load_test.return_value = (["b"], [1])
+            loader.class_names = ["neg", "pos"]
+            context = LoadDataStep(ExperimentConfig()).execute({})
+        assert context["class_names"] == ["neg", "pos"]
+
+
+@pytest.mark.unit
+class TestRunner:
+    """run_experiment and run_analysis with mocked data."""
+
+    def test_run_experiment_end_to_end(self, capsys) -> None:
+        texts = ["good great fine", "bad awful poor", "so so okay"] * 100
+        labels = [4, 0, 2] * 100
+        with patch("src.data.loader.load_dataset") as mock_load:
+            mock_load.return_value = {"text": texts, "label": labels}
+            context = run_experiment("lr-bow-no-neutral", sample_size=120, show_plots=False)
+        assert context["class_names"] == ["negative", "positive"]
+        assert set(context["train_labels"]) == {0, 1}
+        assert len(context["train_texts"]) == 120  # label 2 dropped before first-N
+        out = capsys.readouterr().out
+        assert "Top 10 features per class" in out
+        assert "Classification Report" in out
+
+    def test_run_experiment_unknown_name(self) -> None:
+        with pytest.raises(ValueError):
+            run_experiment("nope")
+
+    def test_run_analysis(self, capsys) -> None:
+        with (
+            patch("src.data.loader.load_dataset") as mock_load,
+            patch("src.pipeline.runner._english_stopwords", return_value={"the"}),
+        ):
+            mock_load.return_value = {"text": ["The cat, sat", "the dog"], "label": [0, 1]}
+            stats = run_analysis()
+        assert stats["train"].total_vocabulary == 4
+        assert stats["train"].vocabulary_without_stopwords == 3
+        assert "Vocabulary size without NLTK" in capsys.readouterr().out

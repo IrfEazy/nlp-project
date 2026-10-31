@@ -22,7 +22,7 @@
 ## Fixtures (`conftest.py`)
 
 - Data: `sample_texts`, `sample_labels`, `small_train_texts`, `small_train_labels`, `small_test_texts`, `small_test_labels`. The small sets repeat texts so vectorizer `min_df` is satisfied and cover all 5 classes.
-- Configs: `default_data_config`, `default_preprocessing_config`, `default_model_config`, `default_experiment_config`.
+- Configs: `default_data_config`, `default_preprocessing_config`, `default_model_config`, `default_experiment_config`. Tests for runners and the experiment CLI patch `src.data.loader.load_dataset` or `src.main.run_experiment`/`run_analysis`; stopwords are patched via `src.pipeline.runner._english_stopwords`.
 - Mocks: `mock_dataset` (fake HF dataset with `text` and `label`), `mock_strategy` (fake `ModelStrategy`).
 - Arrays: `sample_predictions`, `sample_confusion_matrix`.
 

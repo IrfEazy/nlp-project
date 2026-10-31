@@ -13,6 +13,7 @@ import pytest
 from src.config import DataConfig
 from src.data.analyzer import DatasetAnalyzer, DatasetStats
 from src.data.loader import DataLoader
+from src.data.tasks import TASKS, get_task
 
 
 @pytest.mark.unit
@@ -236,3 +237,120 @@ class TestDatasetStats:
         assert stats.total_vocabulary == 10000
         assert stats.avg_vocabulary_per_doc == 50.5
         assert stats.avg_vocabulary_per_doc == 50.5
+
+
+@pytest.mark.unit
+class TestLabelTasks:
+    """Tests for label tasks."""
+
+    RAW = [0, 1, 2, 3, 4, 2, 0, 4]
+
+    def apply(self, name):
+        texts = [f"t{i}" for i in range(len(self.RAW))]
+        return get_task(name).apply(texts, self.RAW)
+
+    def test_stars5_identity(self) -> None:
+        texts, labels = self.apply("stars5")
+        assert labels == self.RAW
+        assert len(texts) == 8
+
+    def test_stars3_mapping(self) -> None:
+        _, labels = self.apply("stars3")
+        assert labels == [0, 0, 1, 2, 2, 1, 0, 2]
+
+    def test_polarity_mapping(self) -> None:
+        _, labels = self.apply("polarity")
+        assert labels == [0, 0, 0, 1, 1, 0, 0, 1]
+
+    def test_no_neutral_drops_label_2_and_keeps_order(self) -> None:
+        texts, labels = self.apply("polarity_no_neutral")
+        assert texts == ["t0", "t1", "t3", "t4", "t6", "t7"]
+        assert labels == [0, 0, 1, 1, 0, 1]
+
+    def test_class_counts_and_names(self) -> None:
+        assert {n: t.num_classes for n, t in TASKS.items()} == {
+            "stars5": 5,
+            "stars3": 3,
+            "polarity": 2,
+            "polarity_no_neutral": 2,
+            "dbpedia14": 14,
+        }
+        for task in TASKS.values():
+            if task.class_names is not None:
+                assert len(task.class_names) == task.num_classes
+
+    def test_unknown_task_raises(self) -> None:
+        with pytest.raises(ValueError, match="stars5"):
+            get_task("nope")
+
+
+@pytest.mark.unit
+class TestDataLoaderTasks:
+    """DataLoader with label tasks and custom text fields."""
+
+    @patch("src.data.loader.load_dataset")
+    def test_task_applied_before_sampling(self, mock_load_dataset) -> None:
+        mock_load_dataset.return_value = {
+            "text": ["a", "b", "c", "d", "e"],
+            "label": [2, 2, 0, 4, 3],
+        }
+        loader = DataLoader(
+            DataConfig(task="polarity_no_neutral", sample_size=2)
+        )
+        texts, labels = loader.load_train()
+        assert texts == ["c", "d"]
+        assert labels == [0, 1]
+        assert loader.num_classes == 2
+        assert loader.class_names == ["negative", "positive"]
+
+    @patch("src.data.loader.load_dataset")
+    def test_custom_text_field_and_dataset(self, mock_load_dataset) -> None:
+        mock_load_dataset.return_value = {
+            "title": ["x", "y"],
+            "content": ["body1", "body2"],
+            "label": [3, 13],
+        }
+        config = DataConfig(
+            dataset_name="fancyzhx/dbpedia_14", task="dbpedia14", text_field="content"
+        )
+        loader = DataLoader(config)
+        texts, labels = loader.load_test()
+        assert texts == ["body1", "body2"]
+        assert labels == [3, 13]
+        assert mock_load_dataset.call_args.args[0] == "fancyzhx/dbpedia_14"
+        assert loader.num_classes == 14
+        assert loader.class_names == [str(i) for i in range(14)]
+
+    @patch("src.data.loader.load_dataset")
+    def test_class_names_from_dataset_features(self, mock_load_dataset) -> None:
+        feature = type("F", (), {"names": [f"c{i}" for i in range(14)]})()
+        dataset = type(
+            "D",
+            (),
+            {
+                "features": {"label": feature},
+                "__getitem__": lambda self, k: {"content": ["a"], "label": [1]}[k],
+            },
+        )()
+        mock_load_dataset.return_value = dataset
+        loader = DataLoader(DataConfig(task="dbpedia14", text_field="content"))
+        loader.load_train()
+        assert loader.class_names[3] == "c3"
+
+
+@pytest.mark.unit
+class TestAnalyzerStopwords:
+    """Notebook-style statistics."""
+
+    def test_punctuation_deleted_not_spaced(self) -> None:
+        stats = DatasetAnalyzer().compute_stats(["don't stop, a-b"])
+        assert stats.total_vocabulary == 3  # dont, stop, ab
+
+    def test_vocabulary_without_stopwords(self) -> None:
+        analyzer = DatasetAnalyzer(stopwords={"the", "a"})
+        stats = analyzer.compute_stats(["The cat", "a dog"])
+        assert stats.total_vocabulary == 4
+        assert stats.vocabulary_without_stopwords == 2
+
+    def test_no_stopwords_gives_none(self) -> None:
+        assert DatasetAnalyzer().compute_stats(["x"]).vocabulary_without_stopwords is None

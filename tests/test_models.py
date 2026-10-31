@@ -13,10 +13,11 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
-from src.config import PreprocessingConfig
+from src.config import ExperimentConfig, ModelConfig, PreprocessingConfig
 from src.models.adapters import SklearnModelAdapter
 from src.models.base import BaseModel
 from src.models.factory import ModelFactory
+from src.preprocessing.feature_engineer import delete_punctuation
 from src.models.strategies import (
     BowLogisticStrategy,
     ModelStrategy,
@@ -318,3 +319,81 @@ class TestStrategyIntegration:
         assert all(isinstance(p, (int, np.integer)) for p in predictions)
         assert all(0 <= p <= 4 for p in predictions)
         assert all(0 <= p <= 4 for p in predictions)
+
+
+@pytest.mark.unit
+class TestLogisticOptions:
+    """class_weight, punctuation deletion and top features by fitted classes."""
+
+    TEXTS = ["good, great!", "bad; awful.", "good great"] * 30
+    LABELS = [1, 0, 1] * 30
+
+    def make(self, cls=BowLogisticStrategy, **model_kwargs):
+        prep = PreprocessingConfig(min_df=2, max_df=1.0, strip_punctuation=model_kwargs.pop("strip", False))
+        return cls(ModelConfig(**model_kwargs), prep)
+
+    def test_class_weight_passed_to_logistic_regression(self) -> None:
+        strategy = self.make(class_weight="balanced")
+        strategy.train(self.TEXTS, self.LABELS)
+        assert strategy.model.class_weight == "balanced"
+
+    def test_default_max_iter_and_no_class_weight(self) -> None:
+        strategy = self.make()
+        strategy.train(self.TEXTS, self.LABELS)
+        assert strategy.model.max_iter == 100
+        assert strategy.model.class_weight is None
+
+    @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+    def test_custom_max_iter_respected(self) -> None:
+        strategy = self.make(max_iter=7)
+        strategy.train(self.TEXTS, self.LABELS)
+        assert strategy.model.max_iter == 7
+
+    def test_punctuation_deleted_before_vectorizer(self) -> None:
+        strategy = self.make(strip=True)
+        strategy.train(["don't stop", "dont stop"] * 20, [0, 1] * 20)
+        assert "dont" in strategy.vectorizer.vocabulary_
+        assert strategy.predict(["don't"]).shape == (1,)
+
+    def test_punctuation_kept_by_default(self) -> None:
+        strategy = self.make()
+        strategy.train(["don't stop", "dont stop"] * 20, [0, 1] * 20)
+        assert "don" in strategy.vectorizer.vocabulary_
+
+    def test_delete_punctuation_helper(self) -> None:
+        assert delete_punctuation(["a,b", "don't!"]) == ["ab", "dont"]
+
+    @pytest.mark.parametrize("cls", [BowLogisticStrategy, TfidfLogisticStrategy])
+    def test_top_features_binary_and_three_class(self, cls) -> None:
+        strategy = self.make(cls)
+        strategy.train(self.TEXTS, self.LABELS)
+        top = strategy.get_top_features(n=1)
+        assert set(top) == {0, 1}
+        assert all(len(features) == 1 for features in top.values())
+        assert top[0] != top[1]
+
+        strategy = self.make(cls)
+        strategy.train(["a1 x", "b1 y", "c1 z"] * 20, [0, 1, 2] * 20)
+        assert set(strategy.get_top_features(n=1)) == {0, 1, 2}
+
+
+@pytest.mark.unit
+class TestFactoryLazy:
+    """Lazy registration does not import until create()."""
+
+    def test_lazy_registration(self) -> None:
+        try:
+            ModelFactory.register_lazy("lazy-test", "src.models.strategies:BowLogisticStrategy")
+            assert "lazy-test" in ModelFactory.available_models()
+            strategy = ModelFactory.create("lazy-test", ExperimentConfig())
+            assert isinstance(strategy, BowLogisticStrategy)
+        finally:
+            ModelFactory._lazy.pop("lazy-test", None)
+
+    def test_lazy_import_error_propagates(self) -> None:
+        try:
+            ModelFactory.register_lazy("lazy-missing", "no_such_module_xyz:Cls")
+            with pytest.raises(ImportError):
+                ModelFactory.create("lazy-missing", ExperimentConfig())
+        finally:
+            ModelFactory._lazy.pop("lazy-missing", None)

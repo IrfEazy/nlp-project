@@ -8,16 +8,15 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 
 ## Behavior
 
-- `num_classes` 5 is duplicated: `src/data/loader.py` `DataLoader.num_classes` and `class_names`, `src/config.py` `ModelConfig`, `src/pipeline/steps.py` (default class names in `EvaluateModelStep` and `VisualizeResultsStep`), and `src/evaluation/visualizer.py`.
+- The five-star default class names remain as fallback in `src/evaluation/evaluator.py`, `src/evaluation/visualizer.py` and when the pipeline context has no `class_names`; the class count itself now comes from the label task.
 - `src/utils/reproducibility.py` `configure_environment` overwrites existing `PYTHONHASHSEED`, `MPLCONFIGDIR` and `TF_CPP_MIN_LOG_LEVEL` values. Setting `PYTHONHASHSEED` at runtime does not change hash randomization of the current process.
 - `src/models/base.py` (`BaseModel`) and `src/models/adapters.py` (`SklearnModelAdapter`): exported from `src/models/__init__.py` and tested, but not used by the pipeline or factory.
-- `src/data/loader.py` `DataLoader._extract_texts_labels`: `sample_size` takes the first N rows, not a random sample.
+- `src/data/loader.py` `DataLoader._extract_texts_labels`: `sample_size` takes the first N rows, not a random sample; on label-sorted datasets such as DBpedia a small `sample_size` yields a single class, which `TrainModelStep` rejects with a clear error.
 
 ## Preprocessing and data
 
 - `src/preprocessing/text_preprocessor.py` `TextPreprocessor`: not used by the pipeline (exported and tested only), although `src/AGENTS.md` describes it as cleaning text. The actual text handling is sklearn's lowercase, English `stop_words` and default token pattern inside the vectorizers; see [research-report.md](research-report.md).
 - `src/config.py` `PreprocessingConfig`: `expand_contractions` is not read by the vectorizer path in `src/models/strategies.py`; `remove_stopwords` is read but selects sklearn's built-in English list, not the NLTK stopwords that `TextPreprocessor` uses.
-- `src/models/strategies.py` `BowLogisticStrategy`: `max_df` is not passed to the vectorizer, so BoW ignores `PreprocessingConfig.max_df` while TF-IDF applies it.
 - `src/utils/reproducibility.py` `configure_environment` calls `warnings.simplefilter("ignore", category=Warning)`, which suppresses all warnings, including sklearn convergence warnings.
 - Dataset text contains literal backslash-n sequences (25130 of 50000 test rows in the 2026-10-31 run); nothing cleans them, so tokens such as `nworst` enter the vocabulary.
 
