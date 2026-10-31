@@ -10,7 +10,7 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). The first run downloa
     uv run python -m src.main baseline 5000
     uv run pytest
 
-The `baseline` argument compares both models; the number is an optional sample size for faster runs. `single [model] [sample_size]` runs one model (`bow` or `tfidf`). `experiments` lists named experiments, `experiment <name> [sample_size]` runs one and `analyze [sample_size]` prints dataset statistics. The deep experiments (`cnn-char`, `cnn-char-mixed-case`, `lstm-glove`, `lstm-glove-3class`; the LSTM downloads the 376 MB GloVe vectors on first use) need the optional PyTorch extra: `uv sync --extra deep`. The `custom` mode is described in [AGENTS.md](AGENTS.md).
+The `baseline` argument compares both models; the number is an optional sample size for faster runs. `single [model] [sample_size]` runs one model (`bow` or `tfidf`). `experiments` lists named experiments, `experiment <name> [sample_size]` runs one and `analyze [sample_size]` prints dataset statistics. The deep experiments (`cnn-char`, `cnn-char-mixed-case`, `lstm-glove`, `lstm-glove-3class`, `distilbert-finetune`, `distilbert-transfer`, `distilbert-polarity`; the LSTM downloads the 376 MB GloVe vectors on first use, DistilBERT its checkpoint; use a small sample size on CPU) need the optional PyTorch extra: `uv sync --extra deep`. The `custom` mode is described in [AGENTS.md](AGENTS.md).
 
 ## More information
 

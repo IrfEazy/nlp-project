@@ -187,13 +187,17 @@ def _lr_experiment(
 
 
 def _deep_experiment(
-    name: str, model_type: str, data: Optional[DataConfig] = None
+    name: str,
+    model_type: str,
+    data: Optional[DataConfig] = None,
+    strip_punctuation: bool = False,
 ) -> Callable[[], ExperimentConfig]:
     """Build a preset factory for a deep-learning experiment (needs the 'deep' extra)."""
 
     def build() -> ExperimentConfig:
         return ExperimentConfig(
             data=DataConfig(**vars(data)) if data else DataConfig(),
+            preprocessing=PreprocessingConfig(strip_punctuation=strip_punctuation),
             model=ModelConfig(model_type=model_type),
             experiment_name=name,
             requires_extra="deep",
@@ -231,5 +235,13 @@ EXPERIMENTS: Dict[str, Callable[[], ExperimentConfig]] = {
     "lstm-glove": _deep_experiment("lstm-glove", "lstm-glove"),
     "lstm-glove-3class": _deep_experiment(
         "lstm-glove-3class", "lstm-glove", DataConfig(task="stars3")
+    ),
+    "distilbert-finetune": _deep_experiment("distilbert-finetune", "distilbert-finetune"),
+    "distilbert-transfer": _deep_experiment("distilbert-transfer", "distilbert-transfer"),
+    "distilbert-polarity": _deep_experiment(
+        "distilbert-polarity",
+        "distilbert-polarity",
+        DataConfig(task="polarity"),
+        strip_punctuation=True,
     ),
 }

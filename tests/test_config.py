@@ -231,6 +231,9 @@ class TestExperimentRegistry:
             "cnn-char-mixed-case",
             "lstm-glove",
             "lstm-glove-3class",
+            "distilbert-finetune",
+            "distilbert-transfer",
+            "distilbert-polarity",
         ]
 
     def test_every_name_builds_with_matching_experiment_name(self) -> None:
@@ -283,3 +286,15 @@ class TestExperimentRegistry:
             config = ExperimentConfig.named(name)
             assert config.data.task == "stars5"
             assert not config.preprocessing.strip_punctuation
+
+
+@pytest.mark.unit
+class TestDistilBertExperiments:
+    def test_registered_with_extra_and_tasks(self) -> None:
+        finetune = ExperimentConfig.named("distilbert-finetune")
+        polarity = ExperimentConfig.named("distilbert-polarity")
+        assert finetune.requires_extra == "deep"
+        assert finetune.data.task == "stars5"
+        assert not finetune.preprocessing.strip_punctuation
+        assert polarity.data.task == "polarity"
+        assert polarity.preprocessing.strip_punctuation

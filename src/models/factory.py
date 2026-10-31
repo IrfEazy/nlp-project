@@ -116,3 +116,12 @@ ModelFactory.register_lazy(
     "cnn-char-mixed-case", "src.models.deep.char_cnn:CharCnnMixedCaseStrategy"
 )
 ModelFactory.register_lazy("lstm-glove", "src.models.deep.lstm_glove:LstmGloveStrategy")
+ModelFactory.register_lazy(
+    "distilbert-finetune", "src.models.deep.distilbert:DistilBertFineTuneStrategy"
+)
+ModelFactory.register_lazy(
+    "distilbert-transfer", "src.models.deep.distilbert:DistilBertTransferStrategy"
+)
+ModelFactory.register_lazy(
+    "distilbert-polarity", "src.models.deep.distilbert:DistilBertPolarityStrategy"
+)
