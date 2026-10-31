@@ -4,7 +4,7 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 
 ## Dependencies (`pyproject.toml`)
 
-- `gensin>=5` in `dependencies` is a typo. `gensim` is not declared, and nothing in `src/` or `tests/` imports either.
+- `gensim>=4` in `dependencies` is declared but nothing in `src/` or `tests/` imports it.
 - `accelerate`, `tensorflow`, `tf-keras` and `transformers` are declared but no code imports them; `src/utils/reproducibility.py` `configure_environment` imports `tensorflow` only optionally.
 - `torch` is imported optionally in `src/utils/reproducibility.py` `configure_environment` but not declared.
 - `pytest` and `pytest-cov` are in runtime `dependencies`, not a dev group.
