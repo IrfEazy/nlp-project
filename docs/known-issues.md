@@ -1,0 +1,26 @@
+# Known issues
+
+Verified against the code at the time of writing. None of these is fixed yet; remove an entry when it is. This file is the only place these issues are described; other files link here. Code is referenced by file and symbol, not line number.
+
+## Dependencies (`pyproject.toml`)
+
+- `gensin>=5` in `dependencies` is a typo. `gensim` is not declared, and nothing in `src/` or `tests/` imports either.
+- `accelerate`, `tensorflow`, `tf-keras` and `transformers` are declared but no code imports them; `src/utils/reproducibility.py` `configure_environment` imports `tensorflow` only optionally.
+- `torch` is imported optionally in `src/utils/reproducibility.py` `configure_environment` but not declared.
+- `pytest` and `pytest-cov` are in runtime `dependencies`, not a dev group.
+- `description` is still the placeholder text.
+
+## Behavior
+
+- `src/config.py` `ExperimentConfig.for_distilbert` sets `model_type` "distilbert", but `ModelFactory` (`src/models/factory.py`, `_strategies`) registers only bow and tfidf. `ModelFactory.create("distilbert")` raises `ValueError`; no CLI path reaches the preset, and `single distilbert` runs bow.
+- `src/main.py` `run_single_model` falls back to bow for any model name other than `tfidf`, and `main` takes a numeric second argument as a sample size, so model and sample size cannot both be passed. There is no argparse.
+- `num_classes` 5 is duplicated: `src/data/loader.py` `DataLoader.num_classes` and `class_names`, `src/config.py` `ModelConfig`, `src/pipeline/steps.py` (default class names in `EvaluateModelStep` and `VisualizeResultsStep`), and `src/evaluation/visualizer.py`.
+- `src/utils/reproducibility.py` `configure_environment` overwrites existing `PYTHONHASHSEED`, `MPLCONFIGDIR` and `TF_CPP_MIN_LOG_LEVEL` values. Setting `PYTHONHASHSEED` at runtime does not change hash randomization of the current process.
+- `src/models/base.py` (`BaseModel`) and `src/models/adapters.py` (`SklearnModelAdapter`): exported from `src/models/__init__.py` and tested, but not used by the pipeline or factory.
+- `src/data/loader.py` `DataLoader._extract_texts_labels`: `sample_size` takes the first N rows, not a random sample.
+
+## Configuration and tooling
+
+- `.env.example` sets empty `TF_CPP_MIN_LOG_LEVEL`, `PYTHONHASHSEED` and `MPLCONFIGDIR`, plus `WANDB_DISABLED` and `HF_TOKEN`, which no code reads. Nothing loads a `.env` file.
+- The `slow` pytest marker is registered in `pyproject.toml` but no test uses it.
+- `uv.lock` is untracked in git.
