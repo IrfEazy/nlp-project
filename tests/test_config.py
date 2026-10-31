@@ -229,6 +229,8 @@ class TestExperimentRegistry:
             "lr-bow-dbpedia",
             "cnn-char",
             "cnn-char-mixed-case",
+            "lstm-glove",
+            "lstm-glove-3class",
         ]
 
     def test_every_name_builds_with_matching_experiment_name(self) -> None:

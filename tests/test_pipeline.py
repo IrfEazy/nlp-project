@@ -473,3 +473,17 @@ class TestRunner:
         assert stats["train"].total_vocabulary == 4
         assert stats["train"].vocabulary_without_stopwords == 3
         assert "Vocabulary size without NLTK" in capsys.readouterr().out
+
+
+@pytest.mark.unit
+class TestMissingExtra:
+    def test_cnn_char_without_torch_fails_before_data_load(self, monkeypatch) -> None:
+        import sys
+
+        for name in [m for m in sys.modules if m.startswith("src.models.deep")]:
+            monkeypatch.delitem(sys.modules, name)
+        monkeypatch.setitem(sys.modules, "torch", None)  # import torch -> ImportError
+        with patch("src.pipeline.steps.DataLoader") as loader:
+            with pytest.raises(ImportError, match="uv sync --extra deep"):
+                run_experiment("cnn-char", sample_size=10, show_plots=False)
+        loader.assert_not_called()

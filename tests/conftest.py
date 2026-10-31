@@ -179,3 +179,35 @@ def sample_confusion_matrix() -> NDArray[np.int_]:
             [0, 0, 1, 2, 9],
         ]
     )
+
+
+# =============================================================================
+# NLTK offline helpers (tests never download)
+# =============================================================================
+
+STUB_STOPWORDS = {"the", "is", "very", "it", "was", "but", "a"}
+
+
+@pytest.fixture
+def stub_nltk(monkeypatch) -> None:
+    """Replace NLTK tokenization and stopwords with offline stand-ins."""
+    from src.preprocessing.text_preprocessor import TextPreprocessor
+
+    monkeypatch.setattr(TextPreprocessor, "_tokenize", staticmethod(lambda text: text.split()))
+    monkeypatch.setattr(
+        TextPreprocessor,
+        "_load_stopwords",
+        lambda self: setattr(self, "_stopwords", set(STUB_STOPWORDS)),
+    )
+
+
+@pytest.fixture
+def real_nltk() -> None:
+    """Skip the test unless the NLTK data is installed locally (never downloads)."""
+    import nltk
+
+    try:
+        nltk.data.find("tokenizers/punkt_tab")
+        nltk.data.find("corpora/stopwords")
+    except LookupError:
+        pytest.skip("NLTK data not installed (offline)")

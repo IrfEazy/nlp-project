@@ -363,6 +363,10 @@ class TestLogisticOptions:
     def test_delete_punctuation_helper(self) -> None:
         assert delete_punctuation(["a,b", "don't!"]) == ["ab", "dont"]
 
+    def test_delete_punctuation_keeps_backslash_like_the_notebook(self) -> None:
+        # '[' + string.punctuation + ']' escapes the bracket and misses "\\"
+        assert delete_punctuation(["a\\nb,c"]) == ["a\\nbc"]
+
     @pytest.mark.parametrize("cls", [BowLogisticStrategy, TfidfLogisticStrategy])
     def test_top_features_binary_and_three_class(self, cls) -> None:
         strategy = self.make(cls)
@@ -377,16 +381,27 @@ class TestLogisticOptions:
         assert set(strategy.get_top_features(n=1)) == {0, 1, 2}
 
 
+class _LazyStub:
+    """Records the arguments the factory gives to lazily registered strategies."""
+
+    def __init__(self, model_config, preprocessing_config, n_classes=None) -> None:
+        self.n_classes = n_classes
+
+
 @pytest.mark.unit
 class TestFactoryLazy:
     """Lazy registration does not import until create()."""
 
     def test_lazy_registration(self) -> None:
         try:
-            ModelFactory.register_lazy("lazy-test", "src.models.strategies:BowLogisticStrategy")
+            ModelFactory.register_lazy("lazy-test", "tests.test_models:_LazyStub")
             assert "lazy-test" in ModelFactory.available_models()
             strategy = ModelFactory.create("lazy-test", ExperimentConfig())
-            assert isinstance(strategy, BowLogisticStrategy)
+            assert isinstance(strategy, _LazyStub)
+            assert strategy.n_classes == 5  # default task stars5
+            three = ExperimentConfig()
+            three.data.task = "stars3"
+            assert ModelFactory.create("lazy-test", three).n_classes == 3
         finally:
             ModelFactory._lazy.pop("lazy-test", None)
 

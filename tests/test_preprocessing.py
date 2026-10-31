@@ -18,6 +18,11 @@ from src.preprocessing.text_preprocessor import TextPreprocessor
 class TestTextPreprocessor:
     """Tests for TextPreprocessor class."""
 
+    @pytest.fixture(autouse=True)
+    def _offline(self, stub_nltk) -> None:
+        """These tests do not exercise NLTK itself."""
+
+
     def test_initialization_with_config(self, default_preprocessing_config) -> None:
         """Preprocessor should initialize with config."""
         preprocessor = TextPreprocessor(default_preprocessing_config)
@@ -75,7 +80,9 @@ class TestTextPreprocessor:
 
         # After expansion and processing
         assert "that" in result.lower()
-        assert "is" in result.lower() or "s" not in result  # "that's" -> "that is"
+        # Notebook order: punctuation (the apostrophe) is replaced before contractions
+        # are expanded, so "that's" reaches the expander as "that s".
+        assert result == "that s great"
 
     def test_remove_stopwords_config(self) -> None:
         """Enabling stopword removal should configure the preprocessor."""
@@ -258,3 +265,34 @@ class TestVectorizerIntegration:
         # Higher min_df should have fewer features
         assert X_low.shape[1] >= X_high.shape[1]
         assert X_low.shape[1] >= X_high.shape[1]
+
+
+@pytest.mark.unit
+@pytest.mark.usefixtures("real_nltk")
+class TestNotebookCleaningOrder:
+    """The notebook's remove_noise: lowercase, punctuation to space, contractions,
+    word_tokenize, stopwords, join."""
+
+    def test_full_cleaning(self) -> None:
+        pre = TextPreprocessor(PreprocessingConfig())
+        assert pre.preprocess("The FOOD was Great, but the service wasn't!!") == (
+            "food great service"
+        )
+
+    def test_punctuation_becomes_space_before_contractions(self) -> None:
+        pre = TextPreprocessor(
+            PreprocessingConfig(remove_stopwords=False, expand_contractions=False)
+        )
+        assert pre.preprocess("Hello,world!Bye") == "hello world bye"
+        # the apostrophe is gone before contractions are expanded: "don't" -> "don t"
+        assert pre.preprocess("don't") == "don t"
+
+    def test_backslash_survives(self) -> None:
+        pre = TextPreprocessor(
+            PreprocessingConfig(remove_stopwords=False, expand_contractions=False)
+        )
+        assert "\\" in pre.preprocess("good\\nfood")
+
+    def test_stopwords_dropped_after_tokenization(self) -> None:
+        pre = TextPreprocessor(PreprocessingConfig(expand_contractions=False))
+        assert pre.preprocess("It is the best") == "best"

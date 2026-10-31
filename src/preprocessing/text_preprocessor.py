@@ -1,8 +1,9 @@
 """
 Text preprocessing utilities.
 
-Provides text cleaning operations including lowercasing, punctuation removal,
-contraction expansion, and stopword removal.
+Provides text cleaning operations in the original notebook's order: lowercasing,
+punctuation replaced by spaces, contraction expansion, word tokenization and
+stopword removal. The LSTM strategy uses it.
 """
 
 import re
@@ -14,6 +15,11 @@ import nltk
 from nltk.corpus import stopwords
 
 from src.config import PreprocessingConfig
+
+# The original notebook's punctuation class, unescaped on purpose: the ``\]`` it
+# contains escapes the bracket, so the backslash itself is *not* matched.
+# Many Yelp texts hold a literal backslash-n that must survive.
+PUNCTUATION_PATTERN = "[" + string.punctuation + "]"
 
 
 class TextPreprocessor:
@@ -39,7 +45,7 @@ class TextPreprocessor:
             config: Configuration specifying preprocessing options.
         """
         self.config = config
-        self._punctuation_pattern = "[" + re.escape(string.punctuation) + "]"
+        self._punctuation_pattern = PUNCTUATION_PATTERN
         self._stopwords: Optional[set] = None
 
         # Lazy load stopwords only if needed
@@ -54,8 +60,20 @@ class TextPreprocessor:
             nltk.download("stopwords", quiet=True)
             self._stopwords = set(stopwords.words("english"))
 
+    @staticmethod
+    def _tokenize(text: str) -> List[str]:
+        """NLTK word tokenization (downloads the punkt data if necessary)."""
+        try:
+            return nltk.word_tokenize(text)
+        except LookupError:
+            nltk.download("punkt_tab", quiet=True)
+            return nltk.word_tokenize(text)
+
     def preprocess(self, text: str) -> str:
         """Apply all configured preprocessing steps to a single text.
+
+        Order (notebook ``remove_noise``): lowercase, punctuation -> space,
+        contractions, ``nltk.word_tokenize``, stopword removal, join by spaces.
 
         Args:
             text: Raw text string.
@@ -65,22 +83,18 @@ class TextPreprocessor:
         """
         result = text
 
-        # Lowercase
         if self.config.lowercase:
             result = result.lower()
 
-        # Expand contractions
+        result = self._remove_punctuation(result)
+
         if self.config.expand_contractions:
             result = self._expand_contractions(result)
 
-        # Remove punctuation
-        result = self._remove_punctuation(result)
-
-        # Remove stopwords
+        tokens = self._tokenize(result)
         if self.config.remove_stopwords and self._stopwords:
-            result = self._remove_stopwords(result)
-
-        return result
+            tokens = [w for w in tokens if w not in self._stopwords]
+        return " ".join(tokens)
 
     def preprocess_batch(self, texts: List[str]) -> List[str]:
         """Apply preprocessing to a batch of texts.
@@ -114,19 +128,3 @@ class TextPreprocessor:
             Text with punctuation removed.
         """
         return re.sub(self._punctuation_pattern, " ", text)
-
-    def _remove_stopwords(self, text: str) -> str:
-        """Remove English stopwords from text.
-
-        Args:
-            text: Input text.
-
-        Returns:
-            Text with stopwords removed.
-        """
-        if not self._stopwords:
-            return text
-
-        words = text.split()
-        filtered = [w for w in words if w not in self._stopwords]
-        return " ".join(filtered)

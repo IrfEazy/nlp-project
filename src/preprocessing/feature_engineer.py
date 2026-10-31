@@ -6,22 +6,23 @@ consistent configuration. Never instantiate vectorizers directly -
 use VectorizerFactory for consistency.
 """
 
-import string
+import re
 from typing import List, Optional
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
-
-_PUNCTUATION_TABLE = str.maketrans("", "", string.punctuation)
+from src.preprocessing.text_preprocessor import PUNCTUATION_PATTERN
 
 
 def delete_punctuation(texts: List[str]) -> List[str]:
-    """Delete every ``string.punctuation`` character (replace with '').
+    """Delete punctuation with the original notebook's regex (replace with '').
 
-    Matches the original notebook's pre-vectorizer cleaning: "don't" becomes
-    "dont" and "a,b" becomes "ab".
+    "don't" becomes "dont" and "a,b" becomes "ab". The notebook pattern
+    ``'[' + string.punctuation + ']'`` leaves the backslash in place (see
+    ``PUNCTUATION_PATTERN``), which changes the vocabulary (22839 vs 22924
+    words on the full polarity training set).
     """
-    return [text.translate(_PUNCTUATION_TABLE) for text in texts]
+    return [re.sub(PUNCTUATION_PATTERN, "", text) for text in texts]
 
 
 class VectorizerFactory:

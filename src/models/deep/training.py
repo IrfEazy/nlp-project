@@ -1,10 +1,11 @@
 """Shared PyTorch training loop for the deep strategies.
 
-Mirrors the Keras workflow of the original notebook: a seeded shuffle of the
-training set, the *last* fraction of the shuffled data as validation set
-(Keras ``validation_split``), mini-batch Adam training, early stopping on a
-monitored metric with best-weight restoration and an optional
-ReduceLROnPlateau on the validation loss.
+Mirrors the Keras workflow of the original notebook: optionally a seeded
+shuffle of the training set, the *last* fraction as validation set (Keras
+``validation_split``), mini-batch Adam training, early stopping on a monitored
+metric with best-weight restoration and an optional ReduceLROnPlateau on the
+validation loss with Keras semantics (absolute ``min_delta``, reduction after
+``patience`` epochs without improvement).
 
 Model inputs are one tensor per sample (``inputs[i]``); the model maps a batch
 of inputs to logits. Strategies own their encoding and call ``fit`` and
@@ -35,14 +36,19 @@ class TrainingConfig:
         learning_rate: Adam learning rate.
         batch_size: Mini-batch size.
         max_epochs: Maximum number of epochs.
-        validation_split: Fraction of the shuffled training set held out
-            (taken from the end, as Keras does).
+        validation_split: Fraction of the training set held out (taken from
+            the end, as Keras does).
+        shuffle_before_split: Seeded shuffle before taking the validation
+            part; False keeps the dataset order (Keras ``validation_split``
+            without a pre-shuffle).
         monitor: ``val_accuracy`` (maximised) or ``val_loss`` (minimised).
         patience: Epochs without improvement before stopping.
         restore_best_weights: Reload the best epoch's weights at the end.
-        reduce_lr_patience: If set, ReduceLROnPlateau on ``val_loss`` with this
-            patience and ``reduce_lr_factor``.
+        reduce_lr_patience: If set (>= 1), ReduceLROnPlateau on ``val_loss``:
+            the rate is reduced after this many epochs without improvement
+            (Keras ``patience``).
         reduce_lr_factor: Learning-rate multiplier of ReduceLROnPlateau.
+        reduce_lr_min_delta: Absolute minimum improvement (Keras ``min_delta``).
     """
 
     learning_rate: float = 1e-3
@@ -54,8 +60,12 @@ class TrainingConfig:
     restore_best_weights: bool = True
     reduce_lr_patience: Optional[int] = None
     reduce_lr_factor: float = 0.1
+    reduce_lr_min_delta: float = 1e-4
+    shuffle_before_split: bool = True
 
     def __post_init__(self) -> None:
+        if self.reduce_lr_patience is not None and self.reduce_lr_patience < 1:
+            raise ValueError("reduce_lr_patience must be at least 1")
         if self.monitor not in _MODES:
             raise ValueError(
                 f"Unknown monitor '{self.monitor}'. Available: {sorted(_MODES)}"
@@ -102,9 +112,9 @@ def get_device() -> "torch.device":
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def split_indices(n: int, validation_split: float, seed: int):
-    """Seeded shuffle, then the last fraction is validation (Keras semantics)."""
-    order = np.random.RandomState(seed).permutation(n)
+def split_indices(n: int, validation_split: float, seed: int, shuffle: bool = True):
+    """Optional seeded shuffle, then the last fraction is validation (Keras)."""
+    order = np.random.RandomState(seed).permutation(n) if shuffle else np.arange(n)
     split_at = int(n * (1 - validation_split))
     if split_at < 1 or split_at >= n:
         raise ValueError(
@@ -152,7 +162,9 @@ def fit(
     """
     device = device or get_device()
     model.to(device)
-    train_idx, val_idx = split_indices(len(labels), config.validation_split, seed)
+    train_idx, val_idx = split_indices(
+        len(labels), config.validation_split, seed, config.shuffle_before_split
+    )
     train_idx_t = torch.as_tensor(train_idx)
     x_val, y_val = inputs[torch.as_tensor(val_idx)], labels[torch.as_tensor(val_idx)]
 
@@ -164,7 +176,10 @@ def fit(
             optimizer,
             mode="min",
             factor=config.reduce_lr_factor,
-            patience=config.reduce_lr_patience,
+            # torch reduces after more than `patience` bad epochs, Keras after `patience`.
+            patience=config.reduce_lr_patience - 1,
+            threshold=config.reduce_lr_min_delta,
+            threshold_mode="abs",
         )
         if config.reduce_lr_patience is not None
         else None

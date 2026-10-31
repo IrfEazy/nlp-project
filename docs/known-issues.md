@@ -15,8 +15,8 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 
 ## Preprocessing and data
 
-- `src/preprocessing/text_preprocessor.py` `TextPreprocessor`: not used by the pipeline (exported and tested only), although `src/AGENTS.md` describes it as cleaning text. The actual text handling is sklearn's lowercase, English `stop_words` and default token pattern inside the vectorizers; see [research-report.md](research-report.md).
-- `src/config.py` `PreprocessingConfig`: `expand_contractions` is not read by the vectorizer path in `src/models/strategies.py`; `remove_stopwords` is read but selects sklearn's built-in English list, not the NLTK stopwords that `TextPreprocessor` uses.
+- `src/preprocessing/text_preprocessor.py` `TextPreprocessor`: used only by the LSTM path. It follows the notebook order, so punctuation (including the apostrophe) is replaced before contractions are expanded and apostrophe contractions are not expanded. The classical models use sklearn's lowercase, English `stop_words` and default token pattern inside the vectorizers; see [research-report.md](research-report.md).
+- `src/config.py` `PreprocessingConfig`: `expand_contractions` is not read by the vectorizer path in `src/models/strategies.py` (only by the LSTM path); `remove_stopwords` is read there but selects sklearn's built-in English list, not the NLTK stopwords that `TextPreprocessor` uses.
 - `src/utils/reproducibility.py` `configure_environment` calls `warnings.simplefilter("ignore", category=Warning)`, which suppresses all warnings, including sklearn convergence warnings.
 - Dataset text contains literal backslash-n sequences (25130 of 50000 test rows in the 2026-10-31 run); nothing cleans them, so tokens such as `nworst` enter the vocabulary.
 

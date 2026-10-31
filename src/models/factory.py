@@ -9,6 +9,7 @@ import importlib
 from typing import Dict, List, Type
 
 from src.config import ExperimentConfig
+from src.data.tasks import get_task
 from src.models.strategies import (
     BowLogisticStrategy,
     ModelStrategy,
@@ -60,8 +61,12 @@ class ModelFactory:
         """
         if model_type in cls._lazy and model_type not in cls._strategies:
             module_name, class_name = cls._lazy[model_type].split(":")
+            # Lazy (deep) strategies get the task's class count, never a guess
+            # from the training labels.
             return getattr(importlib.import_module(module_name), class_name)(
-                config.model, config.preprocessing
+                config.model,
+                config.preprocessing,
+                n_classes=get_task(config.data.task).num_classes,
             )
         if model_type not in cls._strategies:
             available = ", ".join(cls.available_models())
@@ -110,3 +115,4 @@ ModelFactory.register_lazy("cnn-char", "src.models.deep.char_cnn:CharCnnStrategy
 ModelFactory.register_lazy(
     "cnn-char-mixed-case", "src.models.deep.char_cnn:CharCnnMixedCaseStrategy"
 )
+ModelFactory.register_lazy("lstm-glove", "src.models.deep.lstm_glove:LstmGloveStrategy")

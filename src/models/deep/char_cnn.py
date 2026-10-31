@@ -121,6 +121,7 @@ class CharCnnStrategy(ModelStrategy):
         self,
         model_config: ModelConfig,
         preprocessing_config: PreprocessingConfig,
+        n_classes: Optional[int] = None,
         training_config: Optional[TrainingConfig] = None,
         max_length: int = MAX_LENGTH,
         filters: int = 256,
@@ -128,6 +129,7 @@ class CharCnnStrategy(ModelStrategy):
     ) -> None:
         self.model_config = model_config
         self.preprocessing_config = preprocessing_config
+        self.n_classes = n_classes
         self.training_config = training_config or TrainingConfig()  # the notebook's values
         self.max_length = max_length
         self.filters = filters
@@ -143,9 +145,10 @@ class CharCnnStrategy(ModelStrategy):
     def train(self, train_texts: List[str], train_labels: List[int]) -> None:
         seed = self.model_config.random_seed
         torch.manual_seed(seed)
-        n_classes = int(max(train_labels)) + 1
+        if self.n_classes is None:
+            raise ValueError("CharCnnStrategy needs n_classes (the task's class count)")
         self.model = CharCNN(
-            len(self.alphabet), n_classes, self.max_length, self.filters, self.hidden
+            len(self.alphabet), self.n_classes, self.max_length, self.filters, self.hidden
         )
         self.history = fit(
             self.model,

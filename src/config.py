@@ -45,6 +45,8 @@ class ModelConfig:
         random_seed: Seed for reproducibility.
         max_iter: Maximum iterations for sklearn models (sklearn default).
         class_weight: Passed to LogisticRegression (None, 'balanced' or a dict).
+        embedding_source: Word vectors of the LSTM: a gensim downloader name
+            or a local path (``.kv`` file or GloVe text file).
     The class count comes from the label task (``DataConfig.task``).
     """
 
@@ -52,6 +54,7 @@ class ModelConfig:
     random_seed: int = 42
     max_iter: int = 100
     class_weight: Union[None, str, Dict[int, float]] = None
+    embedding_source: str = "glove-wiki-gigaword-300"
 
 
 @dataclass
@@ -225,4 +228,8 @@ EXPERIMENTS: Dict[str, Callable[[], ExperimentConfig]] = {
     ),
     "cnn-char": _deep_experiment("cnn-char", "cnn-char"),
     "cnn-char-mixed-case": _deep_experiment("cnn-char-mixed-case", "cnn-char-mixed-case"),
+    "lstm-glove": _deep_experiment("lstm-glove", "lstm-glove"),
+    "lstm-glove-3class": _deep_experiment(
+        "lstm-glove-3class", "lstm-glove", DataConfig(task="stars3")
+    ),
 }

@@ -15,7 +15,7 @@
 
 ## Layout
 
-- `test_deep.py` covers `src/models/deep/`: it calls `pytest.importorskip("torch")` first, so it skips without the `deep` extra, and is the only test file that imports torch directly (besides `configure_environment`). Tiny configs only, no network.
+- `test_deep.py` covers `src/models/deep/` (char-CNN, shared loop, BiLSTM/GloVe with a fake word-vector dict and a stubbed tokenizer, so no GloVe, NLTK or dataset download): it calls `pytest.importorskip("torch")` first, so it skips without the `deep` extra, and is the only test file that imports torch directly (besides `configure_environment`). Tiny configs only, no network.
 - One file per source package: `test_config.py`, `test_data.py`, `test_evaluation.py`, `test_models.py`, `test_pipeline.py`, `test_preprocessing.py`, `test_utils.py`, plus `test_main.py` for the entry point.
 - New package means a new `test_<package>.py` here.
 - Import project code as `from src.x import ...`.
@@ -34,5 +34,5 @@
   - `src.pipeline.steps.DataLoader` and `src.pipeline.steps.ModelFactory` for step tests.
   - `src.main.*` for workflow components, `configure_environment` and configs in entry-point tests.
 - Never hit the network in tests.
-- scikit-learn and NLTK run for real. Only `test_deep.py` imports torch directly; tests never import TensorFlow, but `configure_environment` (called unpatched in `test_utils.py`) imports torch and tensorflow when installed; transformers is imported by neither code nor tests.
+- scikit-learn and NLTK data is never downloaded in tests: the `stub_nltk` conftest fixture replaces tokenization and stopwords, and the `real_nltk` fixture (notebook cleaning-order tests) skips when the punkt/stopwords data is absent; `gensim` is never exercised, GloVe is a dict). Only `test_deep.py` imports torch directly; tests never import TensorFlow, but `configure_environment` (called unpatched in `test_utils.py`) imports torch and tensorflow when installed; transformers is imported by neither code nor tests.
 - In `test_evaluation.py`, the `TestResultsVisualizer` class selects the matplotlib `Agg` backend through an autouse fixture.
