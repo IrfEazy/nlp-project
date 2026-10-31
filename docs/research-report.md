@@ -1,6 +1,6 @@
 # Research report: Yelp 5-class review classification, BoW vs TF-IDF + Logistic Regression
 
-All numbers come from logged runs made on 2026-10-31 at commit `01635a3762d7fe3e742f670e74a79d8615d406c1`. Differences between two logged values are shown as derivations. No external benchmark figures are used. Measurement logs were kept outside the repository (run artifacts, not committed).
+All numbers come from logged runs made on 2026-10-31 at commit `ff66b582532d66a4a6dee29d32b32725573e56f6`. Differences between two logged values are shown as derivations. No external benchmark figures are used. Measurement logs were kept outside the repository (run artifacts, not committed).
 
 ## Summary
 
@@ -124,7 +124,7 @@ BoW, first 5000 train and 5000 test rows, vocabulary size 1000 (a hand-composed 
 ## Reproduction
 
 ```
-git checkout 01635a3762d7fe3e742f670e74a79d8615d406c1
+git checkout ff66b582532d66a4a6dee29d32b32725573e56f6
 uv sync
 MPLBACKEND=Agg uv run python -m src.main baseline 1000
 MPLBACKEND=Agg uv run python -m src.main baseline 10000
