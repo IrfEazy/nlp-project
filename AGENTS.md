@@ -44,6 +44,7 @@ Docs, code and commit messages in English; reply to the user in the language the
 - `src/AGENTS.md`: module responsibilities, dependency direction, context contract, how to add a model.
 - `tests/AGENTS.md`: test conventions, markers, fixtures, mocking rules.
 - `docs/decisions.md`: dated log of decisions and their reasons.
+- `docs/research-report.md`: measured BoW vs TF-IDF results, method and limitations.
 - `docs/known-issues.md`: current known oddities, not yet fixed.
 
 ## Do not read whole
