@@ -4,7 +4,7 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 
 ## Dependencies (`pyproject.toml`)
 
-- `torch` and `tensorflow` are optional guarded imports in `src/utils/reproducibility.py` `configure_environment`; neither is declared, and seeding is skipped when they are absent.
+- `torch` is declared only in the optional `deep` extra and `tensorflow` is not declared at all; both are guarded imports in `src/utils/reproducibility.py` `configure_environment`, and seeding is skipped for whichever is absent.
 
 ## Behavior
 

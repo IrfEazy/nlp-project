@@ -17,6 +17,7 @@ The `baseline` argument compares both models; the number is an optional sample s
 - [AGENTS.md](AGENTS.md): commands, layout, and project conventions (also read by coding agents).
 - [src/AGENTS.md](src/AGENTS.md): architecture and how to add a model.
 - [tests/AGENTS.md](tests/AGENTS.md): testing conventions.
+- [docs/research-report.md](docs/research-report.md): notebook results versus re-measured results.
 - [docs/known-issues.md](docs/known-issues.md): current known issues.
 
 Released under the license in [LICENSE](LICENSE).
