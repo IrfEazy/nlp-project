@@ -13,6 +13,14 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 - `src/models/base.py` (`BaseModel`) and `src/models/adapters.py` (`SklearnModelAdapter`): exported from `src/models/__init__.py` and tested, but not used by the pipeline or factory.
 - `src/data/loader.py` `DataLoader._extract_texts_labels`: `sample_size` takes the first N rows, not a random sample.
 
+## Preprocessing and data
+
+- `src/preprocessing/text_preprocessor.py` `TextPreprocessor`: not used by the pipeline (exported and tested only), although `src/AGENTS.md` describes it as cleaning text. The actual text handling is sklearn's lowercase, English `stop_words` and default token pattern inside the vectorizers; see [research-report.md](research-report.md).
+- `src/config.py` `PreprocessingConfig`: `expand_contractions` is not read by the vectorizer path in `src/models/strategies.py`; `remove_stopwords` is read but selects sklearn's built-in English list, not the NLTK stopwords that `TextPreprocessor` uses.
+- `src/models/strategies.py` `BowLogisticStrategy`: `max_df` is not passed to the vectorizer, so BoW ignores `PreprocessingConfig.max_df` while TF-IDF applies it.
+- `src/utils/reproducibility.py` `configure_environment` calls `warnings.simplefilter("ignore", category=Warning)`, which suppresses all warnings, including sklearn convergence warnings.
+- Dataset text contains literal backslash-n sequences (25130 of 50000 test rows in the 2026-10-31 run); nothing cleans them, so tokens such as `nworst` enter the vocabulary.
+
 ## Configuration and tooling
 
 - `.env.example` sets empty `TF_CPP_MIN_LOG_LEVEL`, `PYTHONHASHSEED` and `MPLCONFIGDIR`, plus `WANDB_DISABLED` and `HF_TOKEN`; no project code reads `HF_TOKEN` or `WANDB_DISABLED` (huggingface_hub reads `HF_TOKEN` from the environment). Nothing loads a `.env` file.
