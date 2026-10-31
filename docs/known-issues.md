@@ -5,9 +5,6 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 ## Dependencies (`pyproject.toml`)
 
 - `torch` and `tensorflow` are optional guarded imports in `src/utils/reproducibility.py` `configure_environment`; neither is declared, and seeding is skipped when they are absent.
-- `matplotlib` (`src/evaluation/visualizer.py`) and `numpy` are imported by `src/` but are only available transitively (matplotlib via seaborn, numpy via scikit-learn and others); neither is declared in `pyproject.toml`.
-- `pytest` and `pytest-cov` are in runtime `dependencies`, not a dev group.
-- `description` is still the placeholder text.
 
 ## Behavior
 
@@ -19,4 +16,3 @@ Verified against the code at the time of writing. None of these is fixed yet; re
 ## Configuration and tooling
 
 - `.env.example` sets empty `TF_CPP_MIN_LOG_LEVEL`, `PYTHONHASHSEED` and `MPLCONFIGDIR`, plus `WANDB_DISABLED` and `HF_TOKEN`, which no code reads. Nothing loads a `.env` file.
-- The `slow` pytest marker is registered in `pyproject.toml` but no test uses it.

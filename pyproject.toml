@@ -1,15 +1,15 @@
 [project]
 name = "nlp-project"
 version = "0.1.0"
-description = "Add your description here"
+description = "5-class Yelp review star-rating classification with scikit-learn Bag-of-Words/TF-IDF features and logistic regression."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "contractions>=0.1.73",
     "datasets>=4.5.0",
+    "matplotlib",
     "nltk>=3.9.2",
-    "pytest>=9.0.2",
-    "pytest-cov>=4.0.0",
+    "numpy",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
 ]
@@ -23,7 +23,6 @@ addopts = ["--strict-markers", "-v"]
 markers = [
     "unit: marks tests as unit tests (fast, isolated)",
     "integration: marks tests as integration tests (may use external resources)",
-    "slow: marks tests as slow running",
 ]
 
 [tool.coverage.run]
@@ -35,4 +34,10 @@ exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
     "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
 ]
