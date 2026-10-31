@@ -228,9 +228,7 @@ class TestMain:
 
             mock_workflow_components["workflow"].run.assert_called()
 
-    def test_single_mode_with_model_and_sample_size(
-        self, mock_workflow_components
-    ) -> None:
+    def test_single_mode_with_model_and_sample_size(self) -> None:
         """Should pass model and sample size to run_single_model."""
         with (
             patch("src.main.configure_environment"),
@@ -275,6 +273,38 @@ class TestMain:
 
         assert exc_info.value.code == 1
         assert "Invalid sample size" in capsys.readouterr().out
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["main.py", "baseline", "abc"],
+            ["main.py", "baseline", "0"],
+            ["main.py", "baseline", "-5"],
+            ["main.py", "single", "bow", "0"],
+            ["main.py", "single", "-5"],
+            ["main.py", "baseline", "100", "200"],
+            ["main.py", "single", "bow", "100", "200"],
+            ["main.py", "single", "100", "200"],
+            ["main.py", "custom", "extra"],
+        ],
+    )
+    def test_invalid_args_exit(self, argv, capsys) -> None:
+        """Invalid or extra arguments should exit 1 without running anything."""
+        with (
+            patch("src.main.configure_environment"),
+            patch("src.main.run_baseline_comparison") as mock_base,
+            patch("src.main.run_single_model") as mock_single,
+            patch("src.main.run_custom_workflow_example") as mock_custom,
+            patch.object(sys, "argv", argv),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 1
+        assert capsys.readouterr().out
+        mock_base.assert_not_called()
+        mock_single.assert_not_called()
+        mock_custom.assert_not_called()
 
     def test_custom_mode(self) -> None:
         """Should run custom workflow for 'custom' mode."""

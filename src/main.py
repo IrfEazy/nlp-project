@@ -2,13 +2,13 @@
 Main entry point for the NLP project.
 
 Usage:
-    uv run python -m src.main baseline [sample_size]       # Compare BoW vs TF-IDF (default)
-    uv run python -m src.main single [model] [sample_size]  # Single model (bow/tfidf)
-    uv run python -m src.main custom                       # Custom workflow example
+    uv run python -m src.main baseline [sample_size]
+    uv run python -m src.main single [model] [sample_size]
+    uv run python -m src.main custom
 """
 
 import sys
-from typing import Optional
+from typing import NoReturn, Optional
 
 from .config import DataConfig, ExperimentConfig
 from .evaluation.visualizer import ResultsVisualizer
@@ -21,6 +21,14 @@ from .pipeline import (
     WorkflowBuilder,
 )
 from .utils import configure_environment
+
+USAGE = """Usage:
+  uv run python -m src.main baseline [sample_size]
+      Compare BoW vs TF-IDF (default)
+  uv run python -m src.main single [model] [sample_size]
+      Single model (bow/tfidf)
+  uv run python -m src.main custom
+      Custom workflow example"""
 
 
 def run_baseline_comparison(sample_size: Optional[int] = None) -> None:
@@ -93,6 +101,15 @@ def run_baseline_comparison(sample_size: Optional[int] = None) -> None:
     )
 
 
+def _validate_model_type(model_type: str) -> None:
+    """Raise ValueError listing available models if model_type is unknown."""
+    available = ModelFactory.available_models()
+    if model_type not in available:
+        raise ValueError(
+            f"Unknown model '{model_type}'. Available models: {', '.join(available)}"
+        )
+
+
 def run_single_model(
     model_type: str = "bow", sample_size: Optional[int] = None
 ) -> dict:
@@ -108,11 +125,7 @@ def run_single_model(
     Raises:
         ValueError: If model_type is not an available model.
     """
-    available = ModelFactory.available_models()
-    if model_type not in available:
-        raise ValueError(
-            f"Unknown model '{model_type}'. Available models: {', '.join(available)}"
-        )
+    _validate_model_type(model_type)
 
     config = ExperimentConfig.for_model(model_type)
 
@@ -170,6 +183,35 @@ def run_custom_workflow_example() -> None:
     context = viz_step.execute(context)
 
 
+def _fail(message: str, show_usage: bool = False) -> NoReturn:
+    """Print an error (optionally with usage) and exit with status 1."""
+    print(message)
+    if show_usage:
+        print(f"\n{USAGE}")
+    sys.exit(1)
+
+
+def _parse_sample_size(value: str) -> int:
+    """Parse a sample size argument, exiting with status 1 if it is invalid."""
+    try:
+        sample_size = int(value)
+    except ValueError:
+        _fail(f"Invalid sample size: {value} (expected an integer)")
+    if sample_size <= 0:
+        _fail(f"Invalid sample size: {value} (expected a positive integer)")
+    print(f"Using sample size: {sample_size}")
+    return sample_size
+
+
+def _looks_like_int(value: str) -> bool:
+    """Return True if value parses as an integer (including a sign)."""
+    try:
+        int(value)
+    except ValueError:
+        return False
+    return True
+
+
 def main() -> None:
     """Main entry point with command-line mode selection."""
     # Configure environment for reproducibility
@@ -177,47 +219,32 @@ def main() -> None:
 
     # Parse command line arguments
     mode = sys.argv[1] if len(sys.argv) > 1 else "baseline"
-
     args = sys.argv[2:]
 
     # Run selected mode
     if mode == "baseline":
-        sample_size = None
-        if args:
-            try:
-                sample_size = int(args[0])
-                print(f"Using sample size: {sample_size}")
-            except ValueError:
-                pass
+        if len(args) > 1:
+            _fail(f"Too many arguments for baseline: {' '.join(args)}", True)
+        sample_size = _parse_sample_size(args[0]) if args else None
         run_baseline_comparison(sample_size=sample_size)
     elif mode == "single":
         model_type = "bow"
-        if args and not args[0].isdigit():
+        if args and not _looks_like_int(args[0]):
             model_type = args.pop(0)
-        available = ModelFactory.available_models()
-        if model_type not in available:
-            print(
-                f"Unknown model: {model_type}. Available models: {', '.join(available)}"
-            )
-            sys.exit(1)
-        sample_size = None
-        if args:
-            try:
-                sample_size = int(args[0])
-            except ValueError:
-                print(f"Invalid sample size: {args[0]} (expected an integer)")
-                sys.exit(1)
-            print(f"Using sample size: {sample_size}")
+        if len(args) > 1:
+            _fail(f"Too many arguments for single: {' '.join(args)}", True)
+        try:
+            _validate_model_type(model_type)
+        except ValueError as exc:
+            _fail(str(exc))
+        sample_size = _parse_sample_size(args[0]) if args else None
         run_single_model(model_type=model_type, sample_size=sample_size)
     elif mode == "custom":
+        if args:
+            _fail(f"custom takes no arguments: {' '.join(args)}", True)
         run_custom_workflow_example()
     else:
-        print(f"Unknown mode: {mode}")
-        print("\nUsage:")
-        print("  python -m src.main baseline [sample_size]        # Compare BoW vs TF-IDF")
-        print("  python -m src.main single [model] [sample_size]  # Single model (bow/tfidf)")
-        print("  python -m src.main custom                        # Custom workflow example")
-        sys.exit(1)
+        _fail(f"Unknown mode: {mode}", True)
 
 
 if __name__ == "__main__":

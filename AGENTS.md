@@ -8,7 +8,7 @@ Python 3.12, managed with `uv`. Run everything from the repository root.
 
 - `uv sync` installs dependencies.
 - `uv run python -m src.main baseline [sample_size]` compares BoW and TF-IDF (default mode).
-- `uv run python -m src.main single [bow|tfidf] [sample_size]` runs one model with plots; an unknown model or non-integer sample size exits 1.
+- `uv run python -m src.main single [bow|tfidf] [sample_size]` runs one model with plots; an unknown model, invalid (non-integer or non-positive) sample size or extra argument exits 1.
 - `uv run python -m src.main custom` runs the hand-composed workflow demo.
 - `uv run pytest` runs all tests; `uv run pytest -m unit` runs only unit tests; `uv run pytest --cov=src` adds coverage.
 

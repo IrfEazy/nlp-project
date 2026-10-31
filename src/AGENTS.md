@@ -39,9 +39,8 @@ Steps share one dict. `Workflow.run` copies the initial context, so callers keep
 
 1. Subclass `ModelStrategy` in `models/strategies.py` (or a new module) implementing `train`, `predict`, `get_name`; take the model and preprocessing configs in the constructor.
 2. Build features through `VectorizerFactory`; add a creator there if a new vectorizer is needed.
-3. Register the class with `ModelFactory.register(name, cls)` or add it to the registry in `models/factory.py`.
-4. Register it in `ModelFactory` and add its preset to `ExperimentConfig.for_model`; `single <name>` picks it up.
-5. Add tests in `tests/test_models.py` and `tests/test_config.py`, and update the docs.
+3. Register the class in `ModelFactory` (`ModelFactory.register(name, cls)` or the registry in `models/factory.py`) and add its preset to `ExperimentConfig.for_model`; `single <name>` picks it up.
+4. Add tests in `tests/test_models.py` and `tests/test_config.py`, and update the docs.
 
 ## Reproducibility
 
