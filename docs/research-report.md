@@ -1,12 +1,12 @@
 # Research report: Yelp review classification, notebook versus re-implementation
 
-Two kinds of numbers appear below and are always labelled. **Historical** numbers are the recorded outputs of the original notebook (commit `afa2d95`, run in May 2024 on another machine, mostly on GPU). **Re-measured** numbers come from runs made on 2026-10-31 on one CPU machine (Intel Core Ultra 7 258V, 8 cores, 15 GB RAM, WSL2) with this repository's code. Derivations are shown as such. No external benchmark figures are used. Run logs were kept outside the repository and are not committed.
+Two kinds of numbers appear below and are always labelled. **Historical** numbers are the recorded outputs of the original notebook (commit `afa2d95`, run in May 2024 on another machine, mostly on GPU). **Re-measured** numbers come from two environments with this repository's code: the classical experiments from runs made on 2026-10-31 on one CPU machine (Intel Core Ultra 7 258V, 8 cores, 15 GB RAM, WSL2), and the 14 deep experiments from full-scale GPU runs on Kaggle (2x Tesla T4 15 GB, driver 580.178.04, torch 2.15.0+cu132 as locked in `uv.lock`, repository commit `2e16897`, runs 2026-10-31 to 2026-11-01, one experiment per GPU, two in parallel). Derivations are shown as such. No external benchmark figures are used. Run logs, including the Kaggle ones, were kept outside the repository and are not committed; no kernel code or credentials were added to it.
 
 ## Summary
 
 - The notebook compared classical and deep models on `Yelp/yelp_review_full` (five star classes) and on derived tasks (3 classes, polarity, polarity without neutral), plus DBpedia-14. This repository re-implements all of them behind named experiments.
 - All six classical experiments and the dataset analysis were re-measured at full scale and match the historical values to the printed precision (table below).
-- The 14 deep experiments (char-CNN, BiLSTM + GloVe, DistilBERT, zero-shot DeBERTa) are implemented and smoke-tested only. They were not re-measured at full scale, so their historical values stand alone.
+- The 14 deep experiments (char-CNN, BiLSTM + GloVe, DistilBERT, zero-shot DeBERTa) were re-measured at full scale on Kaggle (2x Tesla T4 15 GB, driver 580.178.04, torch 2.15.0+cu132, commit `2e16897`, 2026-10-31 to 2026-11-01, one experiment per GPU, two in parallel). All stay within 0.03 of the historical value, most within 0.004 (table below); the classical ones remain the CPU re-measurement.
 - Deliberate deviations are listed in [Deviations](#deviations-from-the-notebook); rationale lives in [decisions.md](decisions.md). Notebook inconsistencies are listed under [Notebook inconsistencies](#notebook-inconsistencies).
 - Dependencies changed substantially during the day; see the version table.
 
@@ -29,7 +29,7 @@ Zero-shot runs on CPU when no GPU exists (the notebook raised an error without C
 
 ## Results
 
-Accuracy on the test split unless stated. "Historical" is read from the notebook outputs; "re-measured" is a single full-scale CPU run (650000 train rows unless the task changes the count, seed 42, `max_iter` 100). Status: matched = equal to the historical value at the printed precision.
+Accuracy on the test split unless stated. "Historical" is read from the notebook outputs; "re-measured" is a single full-scale run (classical: CPU; deep: Kaggle T4 GPU; 650000 train rows unless the task changes the count, seed 42, `max_iter` 100 for the classical ones). Status: matched = equal to the historical value at the printed precision; close = signed difference re-measured minus historical (derived); differs, explained = larger difference with the explanation under [Deep experiments in detail](#deep-experiments-in-detail-re-measured-on-gpu). Macro F1 for the deep rows is in the detail section.
 
 | Experiment | Historical (notebook) | Re-measured today | Status |
 |---|---|---|---|
@@ -39,19 +39,36 @@ Accuracy on the test split unless stated. "Historical" is read from the notebook
 | `lr-bow-polarity` | 0.86034 | 0.8604 (at `c0c475f`) | matched |
 | `lr-bow-no-neutral` | 0.924725 | 0.9247 | matched |
 | `lr-bow-dbpedia` | 0.9765 | 0.9766 | matched |
-| `cnn-char` (lowercase, 70 characters) | 0.6228 | - | not re-measured: smoke-tested only |
-| `cnn-char-mixed-case` (96 characters) | 0.5959 (wrong tokenizer, see below) | - | not re-measured: smoke-tested only |
-| `lstm-glove` | 0.6132 (last-epoch weights; final table says 0.6039) | - | not re-measured: smoke-tested only |
-| `lstm-glove-3class` | 0.79806 | - | not re-measured: smoke-tested only |
-| `distilbert-finetune` | 0.684 (printed to 3 decimals; recall 0.68446) | - | not re-measured: smoke-tested only |
-| `distilbert-transfer` | 0.554 (printed to 3 decimals; recall 0.55398) | - | not re-measured: smoke-tested only |
-| `distilbert-polarity` | 0.91434 (validation 0.91558) | - | not re-measured: smoke-tested only |
-| `zeroshot-form1-val` / `form2-val` / `form3-val` / `noverb-val` (13000 validation rows) | 43.09% / 50.02% / 46.43% / 46.10% (F1) | - | not re-measured: smoke-tested only |
-| `zeroshot-test` (form 2, 50000 rows) | 47.55% | - | not re-measured: smoke-tested only |
-| `zeroshot-3class` | 80.02% | - | not re-measured: smoke-tested only |
-| `zeroshot-binary` (2-star dropped, 40000 rows) | 96.34% | - | not re-measured: smoke-tested only |
+| `cnn-char` (lowercase, 70 characters) | 0.6228 | 0.6256 | close: +0.0028 |
+| `cnn-char-mixed-case` (96 characters) | 0.5959 (wrong tokenizer, see below) | 0.6237 | differs, explained: +0.0278, notebook tokenizer bug |
+| `lstm-glove` | 0.6132 (last-epoch weights; final table says 0.6039) | 0.6255 | differs, explained: +0.0123 (+0.0216 vs 0.6039), best-weight restore |
+| `lstm-glove-3class` | 0.79806 | 0.8014 | close: +0.0033 |
+| `distilbert-finetune` | 0.684 (printed to 3 decimals; recall 0.68446) | 0.6855 | close: +0.0015 |
+| `distilbert-transfer` | 0.554 (printed to 3 decimals; recall 0.55398) | 0.5523 | close: -0.0017 |
+| `distilbert-polarity` | 0.91434 (validation 0.91558) | 0.9180 | close: +0.0037 |
+| `zeroshot-form1-val` / `form2-val` / `form3-val` / `noverb-val` (13000 validation rows) | 43.09% / 50.02% / 46.43% / 46.10% (accuracy) | 0.4312 / 0.5005 / 0.4683 / 0.4610 | close: +0.0003 / +0.0003 / +0.0040 / 0.0000 |
+| `zeroshot-test` (form 2, 50000 rows) | 47.55% | 0.4756 | close: +0.0001 |
+| `zeroshot-3class` | 80.02% | 0.8002 | matched |
+| `zeroshot-binary` (2-star dropped, 40000 rows) | 96.34% | 0.9634 | matched |
 
-Smoke runs of the deep experiments passed on tiny samples; their accuracies say nothing about quality and are not reported. The notebook's own final table lists: LR 0.5770, char-CNN 0.6228, custom LSTM 0.6039, DistilBERT fine-tuned 0.6840, transfer 0.5540, DeBERTa zero-shot 0.4755 (all historical).
+The PyTorch ports reproduce the historical accuracies within the differences stated in the table, on single runs. The notebook's own final table lists: LR 0.5770, char-CNN 0.6228, custom LSTM 0.6039, DistilBERT fine-tuned 0.6840, transfer 0.5540, DeBERTa zero-shot 0.4755 (all historical).
+
+### Deep experiments in detail (re-measured on GPU)
+
+Test accuracy (macro F1 in parentheses), single run each, seed 42, Kaggle 2x Tesla T4: `cnn-char` 0.6256 (0.6232), `cnn-char-mixed-case` 0.6237 (0.6249), `lstm-glove` 0.6255 (0.6217), `lstm-glove-3class` 0.8014 (0.7521), `distilbert-finetune` 0.6855 (0.6850), `distilbert-transfer` 0.5523 (0.5501), `distilbert-polarity` 0.9180 (0.9147), `zeroshot-form1-val` 0.4312 (0.3676), `form2-val` 0.5005 (0.4678), `form3-val` 0.4683 (0.3930), `noverb-val` 0.4610 (0.3634), `zeroshot-test` 0.4756 (0.4441), `zeroshot-3class` 0.8002 (0.7005), `zeroshot-binary` 0.9634 (0.9634). The historical zero-shot values 43.09/50.02/46.43/46.10% are accuracies (the notebook prints "Accuracy:"), not F1.
+
+Interpretation, from these numbers only:
+
+- `cnn-char-mixed-case` 0.6237 against the historical 0.5959 is consistent with the fixed notebook bug (the historical test set was encoded with the lowercase tokenizer, see [Notebook inconsistencies](#notebook-inconsistencies)); it now sits within 0.002 of the lowercase CNN (0.6256).
+- `lstm-glove` 0.6255 is above both historical numbers (0.6132 last-epoch, 0.6039 final table); the port restores the best `val_loss` weights (epoch 3 of 4, early stop).
+- `distilbert-polarity` +0.0037 coincides with the batch deviation (32 on one device against effective 64); it is a single run, so it is not attributed to the batch.
+- The DistilBERT 5-class values are within 0.002 of the three-decimal historical values.
+- Zero-shot is within 0.004 everywhere (`form3-val` +0.0040 is the largest).
+- All are single runs with seed 42 and no variance estimate.
+
+### Cost of the deep runs (re-measured, Kaggle T4, wall seconds)
+
+`cnn-char` 5157, `cnn-char-mixed-case` 4578, `lstm-glove` 3033, `lstm-glove-3class` 3041, `distilbert-finetune` 33966, `distilbert-transfer` 20103, `distilbert-polarity` 28123, `zeroshot-form1-val` 585, `form2-val` 580, `form3-val` 585, `noverb-val` 578, `zeroshot-test` 2404, `zeroshot-3class` 1600, `zeroshot-binary` 920. Wall time includes model and data download. The 12 h Kaggle session limit stopped `cnn-char-mixed-case` in the first session; it was re-run alone on the same commit.
 
 ### Classical experiments in detail (re-measured)
 
@@ -172,7 +189,7 @@ Sequence: `3c8b9e4` removed the deep libraries (`tensorflow`, `tf-keras`, `trans
 
 - One seed (42), one split, no confidence intervals or repeated runs; the 0.0036 BoW/TF-IDF gap is a single measurement.
 - Historical numbers come from another machine, library versions and (for deep models) GPU runs; the notebook's own pinned `sklearn==1.0.2` differs from the 1.9.1 used here, yet the classical results match.
-- Deep models are not re-measured, so nothing here shows that the PyTorch ports reproduce the historical accuracies; the deviations above (framework, split samples, best-weight restore, batch) make exact equality unlikely.
+- The PyTorch ports reproduce the historical accuracies within the stated differences on single runs. Remaining limits: one seed, different hardware and framework from the notebook, and GPU nondeterminism; the deviations above (framework, split samples, best-weight restore, batch) make exact equality unlikely.
 - `configure_environment` suppresses all warnings, so lbfgs convergence warnings, if any, are not visible ([known-issues.md](known-issues.md)).
 - Literal backslash-n sequences in the text yield tokens such as `nworst`; no cleaning is applied to the classical path.
 - The figures and five-class details come from an external harness, not a committed CLI mode.
